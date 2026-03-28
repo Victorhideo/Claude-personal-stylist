@@ -71,7 +71,7 @@ Edit `profile.json` with your info. Leave fields as `""` if unsure — the AI wi
 
 ```json
 {
-  "name": "Your Name",
+  "nickname": "Your Nickname",
   "gender": "male",
   "body": {
     "height_cm": 175,
@@ -124,6 +124,32 @@ Add (merge into existing `mcpServers` if present):
 #### Step 4: Restart Claude Desktop
 
 Fully quit and reopen. A 🔧 icon in the bottom left means it's connected!
+
+#### ⚡ For developers: Isolating from your work environment
+
+This MCP server adds styling tools to **all** Claude conversations.
+If you use Claude Code / Claude Desktop for coding and don't want fashion tools in your IDE:
+
+**Option A: Use a separate Claude Desktop profile (recommended)**
+Create a dedicated profile for fashion by using `--profile` flag or a separate config directory.
+
+**Option B: Enable only when needed**
+Comment out the MCP config when not using the stylist:
+```json
+{
+  "mcpServers": {
+    "_claude-personal-stylist": {
+      "comment": "Rename to 'claude-personal-stylist' to enable",
+      "command": "node",
+      "args": ["..."]
+    }
+  }
+}
+```
+
+**Option C: Use Claude Code's project-scoped MCP**
+Add the config to `.claude/settings.json` in a specific project directory instead of the global config.
+This way the stylist only activates when you `cd` into that project.
 
 ### 🗣️ Usage
 
@@ -245,7 +271,7 @@ cp .env.example .env
 
 ```json
 {
-  "name": "あなたの名前",
+  "nickname": "ニックネーム",
   "gender": "male",
   "body": {
     "height_cm": 170,
@@ -298,6 +324,22 @@ Claude Desktop の設定ファイルを開きます：
 #### Step 4: Claude Desktop を再起動
 
 アプリを完全に閉じてもう一度開きます。左下に 🔧 マークが出ていれば接続成功！
+
+#### ⚡ 開発者向け：普段の作業環境と分離する方法
+
+このMCPサーバーを追加すると、**全てのClaude会話**にスタイリストツールが表示されます。
+Claude Code / Claude Desktopをコーディングに使っている場合、以下の方法で分離できます：
+
+**方法A: プロジェクト単位で有効化（おすすめ）**
+グローバル設定ではなく、特定ディレクトリの `.claude/settings.json` にMCP設定を追加。
+そのディレクトリでのみスタイリストが起動します。
+
+**方法B: 使うときだけ有効化**
+普段はconfig内のキー名を `_claude-personal-stylist` にリネーム（無効化）。
+使うときだけ `_` を外して再起動。
+
+**方法C: 専用プロファイルを使う**
+Claude Desktop の `--profile` フラグで、ファッション専用プロファイルを作成。
 
 ### 🗣️ 使い方
 
