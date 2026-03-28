@@ -98,14 +98,30 @@ Edit `profile.json` with your info. Leave fields as `""` if unsure — the AI wi
 
 > 💡 **Don't know your body type?** → Ask Claude "Analyze my body type" with a photo.
 
-#### Step 3: Add MCP config to Claude Desktop
+#### Step 3: Connect to Claude (project-scoped — won't affect your other work)
 
-Open your Claude Desktop config:
+The MCP config lives **inside this repo**, so it only activates when you open Claude in this directory. Your coding sessions, other projects, and Claude Desktop are not affected.
+
+This is already set up for you. Just run Claude Code from the repo:
+
+```bash
+cd claude-personal-stylist
+claude
+```
+
+That's it. The `.claude/settings.json` in this repo tells Claude where the stylist server is.
+
+> 💡 **How it works:** Claude Code reads `.claude/settings.json` in the current directory.
+> The stylist tools only appear when you're inside this project folder.
+> Navigate away and they're gone — zero interference with your other work.
+
+<details>
+<summary>🔧 Alternative: Claude Desktop (global config)</summary>
+
+If you prefer Claude Desktop over Claude Code, add to your global config:
 
 - **Mac**: `~/Library/Application Support/Claude/claude_desktop_config.json`
 - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
-
-Add (merge into existing `mcpServers` if present):
 
 ```json
 {
@@ -119,37 +135,18 @@ Add (merge into existing `mcpServers` if present):
 }
 ```
 
-> 📌 Run `pwd` in the repo folder to find the full path.
+> ⚠️ This adds stylist tools to **all** Claude Desktop conversations.
+> To limit this, rename the key to `_claude-personal-stylist` when not in use.
 
-#### Step 4: Restart Claude Desktop
+</details>
 
-Fully quit and reopen. A 🔧 icon in the bottom left means it's connected!
+#### Step 4: Start chatting
 
-#### ⚡ For developers: Isolating from your work environment
-
-This MCP server adds styling tools to **all** Claude conversations.
-If you use Claude Code / Claude Desktop for coding and don't want fashion tools in your IDE:
-
-**Option A: Use a separate Claude Desktop profile (recommended)**
-Create a dedicated profile for fashion by using `--profile` flag or a separate config directory.
-
-**Option B: Enable only when needed**
-Comment out the MCP config when not using the stylist:
-```json
-{
-  "mcpServers": {
-    "_claude-personal-stylist": {
-      "comment": "Rename to 'claude-personal-stylist' to enable",
-      "command": "node",
-      "args": ["..."]
-    }
-  }
-}
+```bash
+claude  # from the repo directory
 ```
 
-**Option C: Use Claude Code's project-scoped MCP**
-Add the config to `.claude/settings.json` in a specific project directory instead of the global config.
-This way the stylist only activates when you `cd` into that project.
+Say hi, and the stylist will guide you through setup.
 
 ### 🗣️ Usage
 
@@ -298,14 +295,29 @@ cp .env.example .env
 
 > 💡 **骨格タイプが分からない？** → Claudeに「骨格診断して」って聞けばOK。写真を送ると判定してくれます。
 
-#### Step 3: Claude Desktop にMCP設定を追加
+#### Step 3: Claudeに接続（プロジェクトスコープ — 他の作業に影響しません）
 
-Claude Desktop の設定ファイルを開きます：
+MCP設定は**このリポジトリの中**にあるので、このディレクトリでClaudeを開いたときだけスタイリストが有効になります。
+普段のコーディングやClaude Desktopには一切影響しません。
+
+設定は最初から入っています。リポジトリ内でClaude Codeを起動するだけ：
+
+```bash
+cd claude-personal-stylist
+claude
+```
+
+> 💡 **仕組み:** Claude Codeはカレントディレクトリの `.claude/settings.json` を読みます。
+> このフォルダにいるときだけスタイリストツールが使えます。
+> 別のフォルダに移動すればツールは消えます。
+
+<details>
+<summary>🔧 別の方法: Claude Desktop（グローバル設定）</summary>
+
+Claude Desktopを使いたい場合はグローバル設定に追加：
 
 - **Mac**: `~/Library/Application Support/Claude/claude_desktop_config.json`
 - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
-
-以下を追加（既に中身がある場合は `mcpServers` の中にマージ）：
 
 ```json
 {
@@ -319,27 +331,18 @@ Claude Desktop の設定ファイルを開きます：
 }
 ```
 
-> 📌 ターミナルでフォルダに移動して `pwd` と打てばパスが分かります。
+> ⚠️ この方法だと**全てのClaude会話**にスタイリストツールが表示されます。
+> 使わないときはキー名を `_claude-personal-stylist` にリネームして無効化してください。
 
-#### Step 4: Claude Desktop を再起動
+</details>
 
-アプリを完全に閉じてもう一度開きます。左下に 🔧 マークが出ていれば接続成功！
+#### Step 4: 話しかける
 
-#### ⚡ 開発者向け：普段の作業環境と分離する方法
+```bash
+claude  # リポジトリ内で実行
+```
 
-このMCPサーバーを追加すると、**全てのClaude会話**にスタイリストツールが表示されます。
-Claude Code / Claude Desktopをコーディングに使っている場合、以下の方法で分離できます：
-
-**方法A: プロジェクト単位で有効化（おすすめ）**
-グローバル設定ではなく、特定ディレクトリの `.claude/settings.json` にMCP設定を追加。
-そのディレクトリでのみスタイリストが起動します。
-
-**方法B: 使うときだけ有効化**
-普段はconfig内のキー名を `_claude-personal-stylist` にリネーム（無効化）。
-使うときだけ `_` を外して再起動。
-
-**方法C: 専用プロファイルを使う**
-Claude Desktop の `--profile` フラグで、ファッション専用プロファイルを作成。
+挨拶すると、スタイリストがセットアップを案内してくれます。
 
 ### 🗣️ 使い方
 

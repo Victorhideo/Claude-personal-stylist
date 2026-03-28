@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "claude-personal-stylist": {
+      "command": "node",
+      "args": ["src/index.js"],
+      "cwd": "."
+    }
+  }
+}
