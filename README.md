@@ -127,7 +127,16 @@ Fully quit and reopen. A 🔧 icon in the bottom left means it's connected!
 
 ### 🗣️ Usage
 
-Open Claude Desktop and just ask:
+#### First time? Send a photo for instant diagnosis
+
+The AI can analyze your body type and personal color from a single full-body photo.
+Just send a photo in Claude Desktop — no questionnaires needed.
+
+> 📸 **Photo tips:** Wear simple clothes (T-shirt + pants), stand naturally, full body visible, good lighting.
+>
+> No photo? No problem — the AI will ask 3-5 simple questions instead.
+
+#### Then just ask:
 
 ```
 What should I buy from UNIQLO right now?
@@ -292,7 +301,16 @@ Claude Desktop の設定ファイルを開きます：
 
 ### 🗣️ 使い方
 
-Claude Desktop でこう話しかけるだけ：
+#### 初めての方は写真1枚で即診断
+
+全身写真を送るだけで、AIが骨格タイプ・パーソナルカラーを分析します。
+質問に答える必要はありません。
+
+> 📸 **撮影のコツ:** シンプルな服装（Tシャツ+パンツ等）、自然に立つ、全身が映るように、明るい場所で。
+>
+> 写真が難しい場合は、3-5問の簡単な質問で診断します。
+
+#### あとは話しかけるだけ：
 
 ```
 ユニクロで今買うべきもの教えて
