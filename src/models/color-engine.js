@@ -89,16 +89,114 @@ function labF(t) {
 }
 
 /**
- * CIE76色差 (ΔE) を計算する
+ * CIE76色差 (ΔE76) を計算する（後方互換のため残存）
  * @param {{ L: number, a: number, b: number }} lab1
  * @param {{ L: number, a: number, b: number }} lab2
  * @returns {number} 色差値（0以上。0に近いほど似た色）
  */
-function deltaE(lab1, lab2) {
+function deltaE76(lab1, lab2) {
   const dL = lab1.L - lab2.L;
   const da = lab1.a - lab2.a;
   const db = lab1.b - lab2.b;
   return Math.sqrt(dL * dL + da * da + db * db);
+}
+
+/**
+ * CIEDE2000色差を計算する
+ *
+ * CIE76より人間の知覚に近い精度を持つ。青領域での補正（回転項RT）を含む。
+ * 参考: https://en.wikipedia.org/wiki/Color_difference#CIEDE2000
+ *
+ * @param {{ L: number, a: number, b: number }} lab1
+ * @param {{ L: number, a: number, b: number }} lab2
+ * @returns {number} 色差値（0以上。0に近いほど似た色。CIE76より値が小さく出る傾向あり）
+ */
+function deltaE2000(lab1, lab2) {
+  const L1 = lab1.L, a1 = lab1.a, b1 = lab1.b;
+  const L2 = lab2.L, a2 = lab2.a, b2 = lab2.b;
+
+  // Step 1: C*ab を計算
+  const C1ab = Math.sqrt(a1 * a1 + b1 * b1);
+  const C2ab = Math.sqrt(a2 * a2 + b2 * b2);
+  const Cab_mean7 = Math.pow((C1ab + C2ab) / 2, 7);
+
+  // G因子（彩度補正）
+  const G = 0.5 * (1 - Math.sqrt(Cab_mean7 / (Cab_mean7 + Math.pow(25, 7))));
+
+  // a'補正
+  const a1p = a1 * (1 + G);
+  const a2p = a2 * (1 + G);
+
+  // C'（補正後彩度）
+  const C1p = Math.sqrt(a1p * a1p + b1 * b1);
+  const C2p = Math.sqrt(a2p * a2p + b2 * b2);
+
+  // h'（補正後色相角、度数）
+  function hPrime(ap, bp) {
+    if (ap === 0 && bp === 0) return 0;
+    const h = Math.atan2(bp, ap) * (180 / Math.PI);
+    return h < 0 ? h + 360 : h;
+  }
+  const h1p = hPrime(a1p, b1);
+  const h2p = hPrime(a2p, b2);
+
+  // Step 2: ΔL', ΔC', ΔH'
+  const dLp = L2 - L1;
+  const dCp = C2p - C1p;
+
+  let dhp;
+  if (C1p * C2p === 0) {
+    dhp = 0;
+  } else if (Math.abs(h2p - h1p) <= 180) {
+    dhp = h2p - h1p;
+  } else if (h2p - h1p > 180) {
+    dhp = h2p - h1p - 360;
+  } else {
+    dhp = h2p - h1p + 360;
+  }
+  const dHp = 2 * Math.sqrt(C1p * C2p) * Math.sin((dhp / 2) * (Math.PI / 180));
+
+  // Step 3: 平均値
+  const Lp_mean = (L1 + L2) / 2;
+  const Cp_mean = (C1p + C2p) / 2;
+
+  let hp_mean;
+  if (C1p * C2p === 0) {
+    hp_mean = h1p + h2p;
+  } else if (Math.abs(h1p - h2p) <= 180) {
+    hp_mean = (h1p + h2p) / 2;
+  } else if (h1p + h2p < 360) {
+    hp_mean = (h1p + h2p + 360) / 2;
+  } else {
+    hp_mean = (h1p + h2p - 360) / 2;
+  }
+
+  // Step 4: 重み関数
+  const T =
+    1 -
+    0.17 * Math.cos(((hp_mean - 30) * Math.PI) / 180) +
+    0.24 * Math.cos((2 * hp_mean * Math.PI) / 180) +
+    0.32 * Math.cos(((3 * hp_mean + 6) * Math.PI) / 180) -
+    0.20 * Math.cos(((4 * hp_mean - 63) * Math.PI) / 180);
+
+  const SL = 1 + 0.015 * Math.pow(Lp_mean - 50, 2) / Math.sqrt(20 + Math.pow(Lp_mean - 50, 2));
+  const SC = 1 + 0.045 * Cp_mean;
+  const SH = 1 + 0.015 * Cp_mean * T;
+
+  // Step 5: 回転項 RT（青領域での補正）
+  const Cp_mean7 = Math.pow(Cp_mean, 7);
+  const RC = 2 * Math.sqrt(Cp_mean7 / (Cp_mean7 + Math.pow(25, 7)));
+  const d_theta = 30 * Math.exp(-Math.pow((hp_mean - 275) / 25, 2));
+  const RT = -Math.sin((2 * d_theta * Math.PI) / 180) * RC;
+
+  // Step 6: CIEDE2000
+  const kL = 1, kC = 1, kH = 1;
+  return Math.sqrt(
+    Math.pow(dLp / (kL * SL), 2) +
+    Math.pow(dCp / (kC * SC), 2) +
+    Math.pow(dHp / (kH * SH), 2) +
+    RT * (dCp / (kC * SC)) * (dHp / (kH * SH))
+  );
 }
 
 /**
@@ -206,7 +304,7 @@ function minDeltaEFromList(targetLab, labList) {
   if (labList.length === 0) return Infinity;
   let min = Infinity;
   for (const ref of labList) {
-    const d = deltaE(targetLab, ref);
+    const d = deltaE2000(targetLab, ref);
     if (d < min) min = d;
   }
   return min;
@@ -221,8 +319,8 @@ function minDeltaEFromList(targetLab, labList) {
  *   1. 各 productColor を HEX に解決
  *   2. season の best_colors 全 HEX との deltaE → minDeltaE_best
  *   3. season の avoid_colors 全 HEX との deltaE → minDeltaE_avoid
- *   4. baseScore = clamp(0, 100, 100 - minDeltaE_best * 1.5)
- *   5. avoidPenalty = (minDeltaE_avoid < 20) ? -30 : 0
+ *   4. baseScore = clamp(0, 100, 100 - minDeltaE_best * 2.5)  // CIEDE2000は値が小さいため係数増
+ *   5. avoidPenalty = (minDeltaE_avoid < 12) ? -30 : 0  // CIEDE2000基準の閾値
  *   6. colorScore = clamp(0, 100, baseScore + avoidPenalty)
  *   7. 複数 productColors がある場合は max(全 colorScore) を採用
  *
@@ -289,8 +387,8 @@ function computeColorScore({ personalColor, productColors, colorKnowledge }) {
     const minBest = minDeltaEFromList(lab, bestLabs);
     const minAvoid = minDeltaEFromList(lab, avoidLabs);
 
-    const baseScore = clamp(0, 100, 100 - minBest * 1.5);
-    const avoidPenalty = minAvoid < 20 ? -30 : 0;
+    const baseScore = clamp(0, 100, 100 - minBest * 2.5);
+    const avoidPenalty = minAvoid < 12 ? -30 : 0;
     const colorScore = clamp(0, 100, baseScore + avoidPenalty);
 
     const penaltyNote = avoidPenalty < 0 ? ' (NGカラー近似によるペナルティあり)' : '';
@@ -334,4 +432,5 @@ function computeColorScore({ personalColor, productColors, colorKnowledge }) {
 export { computeColorScore };
 
 // テスト用ユーティリティもnamed exportで公開
-export { hexToRgb, rgbToLab, deltaE, resolveColorName };
+// deltaE76: CIE76 (後方互換用)、deltaE2000: CIEDE2000 (現行デフォルト)
+export { hexToRgb, rgbToLab, deltaE76, deltaE2000, resolveColorName };

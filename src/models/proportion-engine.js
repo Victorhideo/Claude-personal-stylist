@@ -60,17 +60,22 @@ const CATEGORY_DIMENSION_MAP = {
  * @param {number} params.heightCm
  * @param {string} params.gender - "mens"|"ladies"
  * @param {string} params.skeletonType - "straight"|"wave"|"natural"
+ * @param {Object} [params.calibration] - キャリブレーション補正値
+ * @param {number} [params.calibration.top_length_offset]
+ * @param {number} [params.calibration.shoulder_width_offset]
+ * @param {number} [params.calibration.waist_position_offset]
+ * @param {number} [params.calibration.inseam_offset]
  * @returns {{ topLength: number, shoulderWidth: number, waistPosition: number, inseam: number }}
  */
-export function getRecommendedDimensions({ heightCm, gender, skeletonType }) {
+export function getRecommendedDimensions({ heightCm, gender, skeletonType, calibration = {} }) {
   const adjustment = TOP_LENGTH_ADJUSTMENTS[skeletonType] ?? 0;
   const shoulderRatio = SHOULDER_WIDTH_RATIO[gender] ?? SHOULDER_WIDTH_RATIO.ladies;
   const inseamRatio = INSEAM_RATIO[gender] ?? INSEAM_RATIO.ladies;
 
-  const topLength = heightCm * 0.38 + adjustment;
-  const shoulderWidth = heightCm * shoulderRatio;
-  const waistPosition = heightCm * GOLDEN_RATIO;
-  const inseam = heightCm * inseamRatio;
+  const topLength = heightCm * 0.38 + adjustment + (calibration.top_length_offset || 0);
+  const shoulderWidth = heightCm * shoulderRatio + (calibration.shoulder_width_offset || 0);
+  const waistPosition = heightCm * GOLDEN_RATIO + (calibration.waist_position_offset || 0);
+  const inseam = heightCm * inseamRatio + (calibration.inseam_offset || 0);
 
   return {
     topLength: Math.round(topLength * 10) / 10,
@@ -122,6 +127,7 @@ function buildStylingNotes(bodyShape, concerns) {
  * @param {string[]} params.concerns
  * @param {Object} params.productDimensions - { lengthCm?, shoulderCm?, bustCm?, waistCm? }
  * @param {string} params.productCategory - "tops"|"bottoms"|"outerwear"|"onepiece"
+ * @param {Object} [params.calibration] - キャリブレーション補正値
  * @returns {{ score: number, recommended: Object, actual: Object, reasoning: string }}
  */
 export function computeProportionScore({
@@ -132,8 +138,9 @@ export function computeProportionScore({
   concerns,
   productDimensions,
   productCategory,
+  calibration = {},
 }) {
-  const recommended = getRecommendedDimensions({ heightCm, gender, skeletonType });
+  const recommended = getRecommendedDimensions({ heightCm, gender, skeletonType, calibration });
   const dimensionMap = CATEGORY_DIMENSION_MAP[productCategory] ?? [];
 
   // 利用可能な寸法だけでスコアを計算する

@@ -57,6 +57,52 @@ const SKELETON_PREFERENCES = {
 };
 
 // ---------------------------------------------------------------------------
+// 否定コンテキスト検出
+// ---------------------------------------------------------------------------
+
+/**
+ * キーワードの後ろに続く否定表現パターン
+ * 「オーバーサイズには見えない」「リネンっぽくない」などを検出
+ */
+const NEGATION_PATTERNS = [
+  /^(?:ない|なく|ません|見えない)/,
+  /^[にはでも](?:ない|なく|見えない|なり|なる)/,
+];
+
+/**
+ * 模倣・風合い表現パターン（素材・シルエットを真似た別素材を示す）
+ * 「リネン風のポリエステル」「レザーライクな合皮」などを検出
+ */
+const IMITATION_PATTERNS = [
+  /風(?:の|に|な)/, /ライクな?/, /調(?:の|な)/, /のような/, /っぽい/,
+];
+
+/**
+ * キーワードマッチ位置における否定コンテキストを判定する
+ * @param {string} text - 元テキスト（正規化済み）
+ * @param {string} keyword - マッチしたキーワード（正規化済み）
+ * @param {number} matchIndex - text内のマッチ開始位置
+ * @returns {{ negated: boolean, imitated: boolean }}
+ */
+function detectNegationContext(text, keyword, matchIndex) {
+  const afterStart = matchIndex + keyword.length;
+  // キーワードの後ろ20文字を取得
+  const after = text.slice(afterStart, afterStart + 20);
+  // キーワードの前10文字を取得
+  const before = text.slice(Math.max(0, matchIndex - 10), matchIndex);
+
+  // 後続否定チェック
+  const negated =
+    NEGATION_PATTERNS.some((p) => p.test(after)) ||
+    /[非不無]$/.test(before);
+
+  // 模倣表現チェック（キーワードの後ろに「風」「ライク」等が続く）
+  const imitated = IMITATION_PATTERNS.some((p) => p.test(after));
+
+  return { negated, imitated };
+}
+
+// ---------------------------------------------------------------------------
 // 内部ヘルパー
 // ---------------------------------------------------------------------------
 
@@ -70,16 +116,21 @@ function normalizeText(text) {
 }
 
 /**
- * キーワード辞書に対してテキストをマッチング
+ * キーワード辞書に対してテキストをマッチング（否定コンテキスト考慮）
  * @param {string} normalizedText
  * @param {Record<string, string[]>} keywordDict
- * @returns {string|null} マッチしたキー、なければ null
+ * @returns {{ key: string, confidence: number } | null} マッチしたキーとconfidence、なければ null
  */
 function matchFirstKeyword(normalizedText, keywordDict) {
   for (const [key, keywords] of Object.entries(keywordDict)) {
     for (const keyword of keywords) {
-      if (normalizedText.includes(normalizeText(keyword))) {
-        return key;
+      const normalizedKw = normalizeText(keyword);
+      const idx = normalizedText.indexOf(normalizedKw);
+      if (idx !== -1) {
+        const { negated, imitated } = detectNegationContext(normalizedText, normalizedKw, idx);
+        if (negated) continue; // 否定表現はスキップ
+        const confidence = imitated ? 0.5 : 1.0;
+        return { key, confidence };
       }
     }
   }
@@ -87,20 +138,25 @@ function matchFirstKeyword(normalizedText, keywordDict) {
 }
 
 /**
- * キーワード辞書に対してテキストをマッチング（複数マッチ）
+ * キーワード辞書に対してテキストをマッチング（複数マッチ・否定コンテキスト考慮）
  * @param {string} normalizedText
  * @param {Record<string, string[]>} keywordDict
- * @returns {string[]} マッチしたキーの配列（重複なし）
+ * @returns {Array<{ type: string, confidence: number }>} マッチしたキーとconfidenceの配列（重複なし）
  */
 function matchAllKeywords(normalizedText, keywordDict) {
   const matched = [];
   for (const [key, keywords] of Object.entries(keywordDict)) {
+    let found = false;
     for (const keyword of keywords) {
-      if (normalizedText.includes(normalizeText(keyword))) {
-        if (!matched.includes(key)) {
-          matched.push(key);
-        }
-        break;
+      if (found) break;
+      const normalizedKw = normalizeText(keyword);
+      const idx = normalizedText.indexOf(normalizedKw);
+      if (idx !== -1) {
+        const { negated, imitated } = detectNegationContext(normalizedText, normalizedKw, idx);
+        if (negated) continue; // 否定表現はスキップ
+        const confidence = imitated ? 0.5 : 1.0;
+        matched.push({ type: key, confidence });
+        found = true;
       }
     }
   }
@@ -113,22 +169,50 @@ function matchAllKeywords(normalizedText, keywordDict) {
 
 /**
  * 商品テキストからファッション特徴を抽出
+ *
+ * 否定コンテキスト（「〜ない」「〜風」等）を考慮し、
+ * 各特徴に confidence（0.0〜1.0）を付与する。
+ *
  * @param {string} productText
- * @returns {{ silhouette: string|null, materials: string[], fitType: string|null, itemType: string|null }}
+ * @returns {{
+ *   silhouette: string|null,
+ *   silhouetteConfidence: number,
+ *   materials: Array<{ type: string, confidence: number }>,
+ *   fitType: string|null,
+ *   fitConfidence: number,
+ *   itemType: string|null,
+ *   itemTypeConfidence: number,
+ * }}
  */
 export function extractProductFeatures(productText) {
   if (typeof productText !== "string" || productText.trim() === "") {
-    return { silhouette: null, materials: [], fitType: null, itemType: null };
+    return {
+      silhouette: null,
+      silhouetteConfidence: 0,
+      materials: [],
+      fitType: null,
+      fitConfidence: 0,
+      itemType: null,
+      itemTypeConfidence: 0,
+    };
   }
 
   const normalized = normalizeText(productText);
 
-  const silhouette = matchFirstKeyword(normalized, SILHOUETTE_KEYWORDS);
+  const silhouetteMatch = matchFirstKeyword(normalized, SILHOUETTE_KEYWORDS);
   const materials = matchAllKeywords(normalized, MATERIAL_KEYWORDS);
-  const fitType = matchFirstKeyword(normalized, FIT_KEYWORDS);
-  const itemType = matchFirstKeyword(normalized, ITEM_TYPE_KEYWORDS);
+  const fitMatch = matchFirstKeyword(normalized, FIT_KEYWORDS);
+  const itemTypeMatch = matchFirstKeyword(normalized, ITEM_TYPE_KEYWORDS);
 
-  return { silhouette, materials, fitType, itemType };
+  return {
+    silhouette: silhouetteMatch?.key ?? null,
+    silhouetteConfidence: silhouetteMatch?.confidence ?? 0,
+    materials,
+    fitType: fitMatch?.key ?? null,
+    fitConfidence: fitMatch?.confidence ?? 0,
+    itemType: itemTypeMatch?.key ?? null,
+    itemTypeConfidence: itemTypeMatch?.confidence ?? 0,
+  };
 }
 
 /**
@@ -166,7 +250,7 @@ export function computeSilhouetteScore({
 
   // 商品特徴抽出
   const detectedFeatures = extractProductFeatures(productText);
-  const { silhouette, materials, fitType, itemType } = detectedFeatures;
+  const { silhouette, silhouetteConfidence, materials, fitType, fitConfidence } = detectedFeatures;
 
   const prefs = SKELETON_PREFERENCES[skeletonType];
   const reasoningParts = [];
@@ -176,9 +260,13 @@ export function computeSilhouetteScore({
 
   if (silhouette !== null) {
     const baseScore = prefs.silhouettes[silhouette] ?? NEUTRAL_SCORE;
-    silhouetteScore = Math.min(100, baseScore + DETECTION_BONUS);
+    // confidence < 1.0（模倣表現）の場合は基本スコアをconfidence倍で減衰し、ボーナスも減衰
+    const effectiveBase = Math.round(baseScore * silhouetteConfidence);
+    const effectiveBonus = Math.round(DETECTION_BONUS * silhouetteConfidence);
+    silhouetteScore = Math.min(100, effectiveBase + effectiveBonus);
+    const confidenceNote = silhouetteConfidence < 1.0 ? `（模倣表現のためconfidence=${silhouetteConfidence}で減衰）` : "";
     reasoningParts.push(
-      `シルエット「${silhouette}ライン」を検出。${skeletonType}骨格への適合ベーススコア: ${baseScore}（検出ボーナス+${DETECTION_BONUS}）`
+      `シルエット「${silhouette}ライン」を検出。${skeletonType}骨格への適合ベーススコア: ${baseScore}（検出ボーナス+${effectiveBonus}）${confidenceNote}`
     );
   } else {
     silhouetteScore = NEUTRAL_SCORE;
@@ -189,10 +277,17 @@ export function computeSilhouetteScore({
   let materialScore;
 
   if (materials.length > 0) {
-    const materialScores = materials.map((mat) => prefs.materials[mat] ?? NEUTRAL_SCORE);
+    // confidence を考慮したスコアを計算し最大値を採用
+    const materialScores = materials.map(({ type, confidence }) => {
+      const base = prefs.materials[type] ?? NEUTRAL_SCORE;
+      return Math.round(base * confidence);
+    });
     materialScore = Math.max(...materialScores);
+    const materialSummary = materials.map(({ type, confidence }) =>
+      confidence < 1.0 ? `${type}(模倣,conf=${confidence})` : type
+    );
     reasoningParts.push(
-      `素材タイプ [${materials.join(", ")}] を検出。最大適合スコア: ${materialScore}`
+      `素材タイプ [${materialSummary.join(", ")}] を検出。最大適合スコア: ${materialScore}`
     );
   } else {
     materialScore = NEUTRAL_SCORE;
@@ -202,8 +297,9 @@ export function computeSilhouetteScore({
   // ------ フィット補足メモ（reasoning参考情報） ------
   if (fitType !== null) {
     const fitScore = prefs.fit[fitType] ?? NEUTRAL_SCORE;
+    const fitNote = fitConfidence < 1.0 ? `（模倣表現のためconfidence=${fitConfidence}）` : "";
     reasoningParts.push(
-      `フィット「${fitType}」を検出。${skeletonType}骨格の適合スコア参考値: ${fitScore}`
+      `フィット「${fitType}」を検出。${skeletonType}骨格の適合スコア参考値: ${fitScore}${fitNote}`
     );
   }
 
@@ -222,10 +318,15 @@ export function computeSilhouetteScore({
       const avoidItems = genderData.avoid_items ?? [];
       const avoidMaterials = genderData.avoid_materials ?? [];
 
-      // 回避素材チェック
-      const matchedAvoidMaterials = avoidMaterials.filter((mat) =>
-        normalizedText.includes(normalizeText(mat))
-      );
+      // 回避素材チェック（否定コンテキストを除外）
+      const matchedAvoidMaterials = avoidMaterials.filter((mat) => {
+        const normalizedMat = normalizeText(mat);
+        const idx = normalizedText.indexOf(normalizedMat);
+        if (idx === -1) return false;
+        const { negated, imitated } = detectNegationContext(normalizedText, normalizedMat, idx);
+        // 否定表現または模倣表現（「リネン風」等）は回避対象から除外
+        return !negated && !imitated;
+      });
       if (matchedAvoidMaterials.length > 0) {
         silhouetteScore = Math.max(0, silhouetteScore - 15);
         materialScore = Math.max(0, materialScore - 15);

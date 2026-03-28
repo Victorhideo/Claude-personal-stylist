@@ -76,5 +76,13 @@
     "skeleton_diagnosed_at": null,
     "color_diagnosed_at": null,
     "last_updated": null
+  },
+
+  "calibration": {
+    "top_length_offset": 0,
+    "shoulder_width_offset": 0,
+    "waist_position_offset": 0,
+    "inseam_offset": 0,
+    "feedback_history": []
   }
 }
