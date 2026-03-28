@@ -8,6 +8,7 @@
 import { computeColorScore } from "./color-engine.js";
 import { computeSilhouetteScore, extractProductFeatures } from "./silhouette-engine.js";
 import { computeProportionScore } from "./proportion-engine.js";
+import { computeTrendScore } from "./trend-engine.js";
 
 // ─── 重み定義 ────────────────────────────────────────────────────────────────
 
@@ -19,46 +20,12 @@ const WEIGHTS = {
   trend: 0.10,
 };
 
-// ─── トレンドスコア（キーワードマッチ） ─────────────────────────────────────
-
-/**
- * プロフィールのトレンドクエリと商品テキストのキーワードマッチでトレンドスコアを算出
- * @param {string[]} trendQueries - profile.trend_queries の配列
- * @param {string} productText - 商品テキスト
- * @returns {{ score: number, matchedKeywords: string[] }}
- */
-function computeTrendScore(trendQueries, productText) {
-  if (!Array.isArray(trendQueries) || trendQueries.length === 0) {
-    return { score: 50, matchedKeywords: [] };
-  }
-  if (typeof productText !== "string" || productText.trim() === "") {
-    return { score: 50, matchedKeywords: [] };
-  }
-
-  const normalizedText = productText.toLowerCase();
-  const matchedKeywords = [];
-
-  for (const query of trendQueries) {
-    if (typeof query !== "string") continue;
-    const normalized = query.trim().toLowerCase();
-    if (normalized.length > 0 && normalizedText.includes(normalized)) {
-      matchedKeywords.push(query);
-    }
-  }
-
-  // マッチ率: 1件で+20pt、2件で+40pt（上限100）
-  const matchRatio = Math.min(1, matchedKeywords.length / Math.max(1, Math.ceil(trendQueries.length * 0.3)));
-  const score = Math.round(50 + matchRatio * 50);
-
-  return { score, matchedKeywords };
-}
-
 // ─── 日本語 reasoning ────────────────────────────────────────────────────────
 
 /**
  * 各スコアをもとに日本語の説明文リストを生成する
  * @param {{ colorScore: number, silhouetteScore: number, materialScore: number, proportionScore: number, trendScore: number }} scores
- * @param {{ colorReasoning: string, silhouetteReasoning: string, proportionReasoning: string, trendKeywords: string[] }} details
+ * @param {{ colorReasoning: string, silhouetteReasoning: string, proportionReasoning: string, trendReasoning: string }} details
  * @returns {string[]}
  */
 function buildReasoning(scores, details) {
@@ -99,10 +66,10 @@ function buildReasoning(scores, details) {
   }
 
   // トレンド
-  if (details.trendKeywords.length > 0) {
-    lines.push(`トレンド一致: ${scores.trendScore}点 — キーワード一致: [${details.trendKeywords.join(", ")}]`);
+  if (details.trendReasoning) {
+    lines.push(`トレンド: ${details.trendReasoning}`);
   } else {
-    lines.push(`トレンド情報: スコア ${scores.trendScore}点（キーワード未一致またはトレンド情報なし）`);
+    lines.push(`トレンド情報: スコア ${scores.trendScore}点（トレンド情報なし）`);
   }
 
   return lines;
@@ -149,9 +116,10 @@ function buildRecommendations(totalScore, breakdown) {
  * @param {Object} params.profile - profile.json の内容
  * @param {Object} params.product - rawProduct ({ text, link, image, colors, dimensions, category })
  * @param {Object} params.knowledge - loadAllKnowledge() の返り値
+ * @param {string[]} [params.trendTexts=[]] - search_x/search_trends で取得したテキスト配列（オプション）
  * @returns {{ totalScore: number, breakdown: Object, reasoning: string[], recommendations: string[] }}
  */
-export function scoreProduct({ profile, product, knowledge }) {
+export function scoreProduct({ profile, product, knowledge, trendTexts = [] }) {
   const productText = product.text ?? "";
   const productColors = Array.isArray(product.colors) ? product.colors : [];
   const productDimensions = product.dimensions ?? {};
@@ -222,9 +190,13 @@ export function scoreProduct({ profile, product, knowledge }) {
     proportionReasoning = propResult.reasoning;
   }
 
-  // 5. トレンドスコア
+  // 5. トレンドスコア（TF-IDFコサイン類似度）
   const trendQueries = profile.trend_queries ?? [];
-  const trendResult = computeTrendScore(trendQueries, productText);
+  const trendResult = computeTrendScore({
+    trendTexts,
+    productText,
+    trendQueries,
+  });
   const trendScore = trendResult.score;
 
   // 6. 総合スコア（加重平均）
@@ -251,7 +223,7 @@ export function scoreProduct({ profile, product, knowledge }) {
       colorReasoning,
       silhouetteReasoning,
       proportionReasoning,
-      trendKeywords: trendResult.matchedKeywords,
+      trendReasoning: trendResult.reasoning,
     }
   );
 
@@ -268,15 +240,16 @@ export function scoreProduct({ profile, product, knowledge }) {
  * @param {Object} params.profile - profile.json の内容
  * @param {Object[]} params.products - rawProducts 配列
  * @param {Object} params.knowledge - loadAllKnowledge() の返り値
+ * @param {string[]} [params.trendTexts=[]] - search_x/search_trends で取得したテキスト配列（オプション）
  * @returns {Array<{ product: Object, score: Object }>}
  */
-export function scoreAndRankProducts({ profile, products, knowledge }) {
+export function scoreAndRankProducts({ profile, products, knowledge, trendTexts = [] }) {
   if (!Array.isArray(products) || products.length === 0) {
     return [];
   }
 
   const scored = products.map((product) => {
-    const score = scoreProduct({ profile, product, knowledge });
+    const score = scoreProduct({ profile, product, knowledge, trendTexts });
     return { product, score };
   });
 

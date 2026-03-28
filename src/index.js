@@ -1017,6 +1017,11 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
               },
             },
           },
+          trend_data: {
+            type: "array",
+            items: { type: "string" },
+            description: "search_x/search_trendsで取得したテキスト配列（オプション）。指定するとTF-IDFコサイン類似度でトレンドスコアを算出します。",
+          },
         },
         required: ["products"],
       },
@@ -1038,6 +1043,30 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           },
         },
         required: ["category"],
+      },
+    },
+    {
+      name: "calibrate",
+      description: "ユーザーのフィードバックから推奨寸法の補正値を調整。「前回の着丈提案が長かった」→ top_length_offsetを-1cm調整。使えば使うほどフィット精度が上がります。",
+      inputSchema: {
+        type: "object",
+        properties: {
+          dimension: {
+            type: "string",
+            enum: ["top_length", "shoulder_width", "waist_position", "inseam"],
+            description: "調整対象の寸法",
+          },
+          feedback: {
+            type: "string",
+            enum: ["too_long", "slightly_long", "perfect", "slightly_short", "too_short"],
+            description: "ユーザーのフィードバック",
+          },
+          context: {
+            type: "string",
+            description: "フィードバックの文脈（例: 'ユニクロのXXが着丈60cmで少し長かった'）",
+          },
+        },
+        required: ["dimension", "feedback"],
       },
     },
   ],
@@ -1399,10 +1428,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const knowledge = loadAllKnowledge();
 
         // スコアリング実行
+        const trendTexts = Array.isArray(args.trend_data) ? args.trend_data : [];
         const ranked = scoreAndRankProducts({
           profile: scoreProfile,
           products: args.products,
           knowledge,
+          trendTexts,
         });
 
         return {
@@ -1513,6 +1544,85 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           ],
         };
       }
+    }
+
+    case "calibrate": {
+      const ADJUSTMENT_MAP = {
+        too_long: -2,
+        slightly_long: -1,
+        perfect: 0,
+        slightly_short: 1,
+        too_short: 2,
+      };
+
+      const profile = loadProfile();
+      if (!profile) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({ error: "profile.json が見つかりません。まず骨格診断(diagnose_skeleton)とパーソナルカラー診断(diagnose_color)を実行してプロフィールを作成してください。" }),
+            },
+          ],
+        };
+      }
+
+      if (!profile.calibration) {
+        profile.calibration = {
+          top_length_offset: 0,
+          shoulder_width_offset: 0,
+          waist_position_offset: 0,
+          inseam_offset: 0,
+          feedback_history: [],
+        };
+      }
+      if (!Array.isArray(profile.calibration.feedback_history)) {
+        profile.calibration.feedback_history = [];
+      }
+
+      const offset = ADJUSTMENT_MAP[args.feedback] ?? 0;
+      const key = `${args.dimension}_offset`;
+      profile.calibration[key] = (profile.calibration[key] || 0) + offset;
+
+      // フィードバック履歴に追加（最大20件）
+      profile.calibration.feedback_history.push({
+        dimension: args.dimension,
+        feedback: args.feedback,
+        context: args.context || "",
+        offset_applied: offset,
+        timestamp: new Date().toISOString(),
+      });
+      if (profile.calibration.feedback_history.length > 20) {
+        profile.calibration.feedback_history = profile.calibration.feedback_history.slice(-20);
+      }
+
+      // calibration オブジェクト全体を保存
+      const updates = [
+        { key: `calibration.${key}`, value: profile.calibration[key] },
+        { key: "calibration.feedback_history", value: profile.calibration.feedback_history },
+      ];
+      saveProfileFields(updates);
+
+      const signStr = offset > 0 ? `+${offset}` : String(offset);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                success: true,
+                dimension: args.dimension,
+                feedback: args.feedback,
+                offset_applied: offset,
+                new_offset: profile.calibration[key],
+                message: `${args.dimension}の補正値を${signStr}cm調整しました（累計: ${profile.calibration[key]}cm）`,
+              },
+              null,
+              2
+            ),
+          },
+        ],
+      };
     }
 
     default:
