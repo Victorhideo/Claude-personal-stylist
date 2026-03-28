@@ -1,0 +1,51 @@
+{
+  "name": "",
+  "gender": "",
+
+  "body": {
+    "height_cm": null,
+    "weight_kg": null,
+    "skeleton_type": "",
+    "face_type": "",
+    "personal_color": ""
+  },
+
+  "taste": {
+    "target_vibes": [],
+    "favorite_brands": [],
+    "favorite_people": [],
+    "avoid": []
+  },
+
+  "shopping": {
+    "budget_per_item_yen": null,
+    "preferred_sizes": {
+      "tops": "",
+      "bottoms": "",
+      "shoes_cm": null
+    },
+    "stores": [
+      {
+        "name": "UNIQLO",
+        "urls": [
+          "https://www.uniqlo.com/jp/ja/men/tops/t-shirts",
+          "https://www.uniqlo.com/jp/ja/men/bottoms",
+          "https://www.uniqlo.com/jp/ja/men/outerwear"
+        ]
+      },
+      {
+        "name": "ZARA",
+        "urls": [
+          "https://www.zara.com/jp/ja/man-l1.html"
+        ]
+      }
+    ]
+  },
+
+  "trend_queries": [
+    "ユニクロ 名品 2026",
+    "ZARA おすすめ メンズ 春"
+  ],
+
+  "pinterest_board_urls": []
+}

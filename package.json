@@ -1,0 +1,18 @@
+{
+  "name": "claude-personal-stylist",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "AI personal stylist — powered by Claude MCP + Playwright. Works with any fashion site.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "setup": "npx playwright install chromium"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "playwright": "^1.45.0",
+    "dotenv": "^16.4.0"
+  },
+  "keywords": ["fashion", "ai", "stylist", "mcp", "claude", "playwright"],
+  "license": "MIT"
+}
