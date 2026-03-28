@@ -13,6 +13,8 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
+  ListPromptsRequestSchema,
+  GetPromptRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { chromium } from "playwright";
 import * as fs from "fs";
@@ -813,6 +815,7 @@ const server = new Server(
   {
     capabilities: {
       tools: {},
+      prompts: {},
     },
   }
 );
@@ -973,6 +976,25 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ["updates"],
       },
     },
+    {
+      name: "get_styling_rules",
+      description: "骨格タイプ・パーソナルカラー・顔タイプ・体型補正・コーデルールの専門知識を取得。提案前に必ず参照すること。",
+      inputSchema: {
+        type: "object",
+        properties: {
+          category: {
+            type: "string",
+            enum: ["skeleton", "color", "face", "body", "coordination", "all"],
+            description: "取得するルールカテゴリ",
+          },
+          type: {
+            type: "string",
+            description: "特定のタイプ（例: 'wave', 'summer', 'cute'）。省略時は全タイプ返却",
+          },
+        },
+        required: ["category"],
+      },
+    },
   ],
 }));
 
@@ -989,14 +1011,39 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             {
               type: "text",
               text: JSON.stringify({
-                error: "profile.json が見つかりません。先にプロフィールを設定してください。",
+                status: "no_profile",
+                action: "profile.jsonが見つかりません。まず骨格診断(diagnose_skeleton)とパーソナルカラー診断(diagnose_color)を実行してプロフィールを作成してください。",
               }),
             },
           ],
         };
       }
+
+      // 不完全チェック
+      const missing = [];
+      if (!profile.body?.skeleton_type) missing.push("skeleton_type（骨格タイプ）→ diagnose_skeletonを実行");
+      if (!profile.body?.personal_color) missing.push("personal_color（パーソナルカラー）→ diagnose_colorを実行");
+      if (!profile.body?.height_cm) missing.push("height_cm（身長）");
+      if (!profile.gender) missing.push("gender（性別）");
+
       return {
-        content: [{ type: "text", text: JSON.stringify(profile, null, 2) }],
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                status: missing.length > 0 ? "incomplete" : "complete",
+                missing,
+                profile,
+                instruction: missing.length > 0
+                  ? `プロフィールが不完全です。以下の情報が不足しています: ${missing.join(", ")}。まず不足情報を取得してからスタイリング提案に進んでください。`
+                  : "プロフィール完備。スタイリング提案可能です。",
+              },
+              null,
+              2
+            ),
+          },
+        ],
       };
     }
 
@@ -1237,6 +1284,81 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
     }
 
+    case "get_styling_rules": {
+      const KNOWLEDGE_DIR = path.join(__dirname, "..", "knowledge");
+      const categoryMap = {
+        skeleton: "skeleton-types.json",
+        color: "personal-colors.json",
+        face: "face-types.json",
+        body: "body-proportions.json",
+        coordination: "coordination-rules.json",
+      };
+
+      try {
+        let result = {};
+
+        if (args.category === "all") {
+          // 全カテゴリ読み込み
+          for (const [cat, filename] of Object.entries(categoryMap)) {
+            const filePath = path.join(KNOWLEDGE_DIR, filename);
+            const raw = fs.readFileSync(filePath, "utf-8");
+            result[cat] = JSON.parse(raw);
+          }
+        } else {
+          const filename = categoryMap[args.category];
+          if (!filename) {
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify({ error: `不明なカテゴリ: ${args.category}` }),
+                },
+              ],
+            };
+          }
+          const filePath = path.join(KNOWLEDGE_DIR, filename);
+          const raw = fs.readFileSync(filePath, "utf-8");
+          const data = JSON.parse(raw);
+
+          // typeフィルタリング
+          if (args.type) {
+            const typeKey = args.type;
+            // types フィールドがある場合
+            if (data.types && data.types[typeKey]) {
+              result = { [typeKey]: data.types[typeKey] };
+            } else if (data[typeKey]) {
+              result = { [typeKey]: data[typeKey] };
+            } else {
+              result = {
+                warning: `タイプ '${typeKey}' が見つかりませんでした。利用可能なタイプ: ${Object.keys(data.types || data).join(", ")}`,
+                data,
+              };
+            }
+          } else {
+            result = data;
+          }
+        }
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      } catch (err) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({ error: `knowledge読み込みエラー: ${err.message}` }),
+            },
+          ],
+        };
+      }
+    }
+
     default:
       return {
         content: [
@@ -1244,6 +1366,38 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         ],
       };
   }
+});
+
+// ─── MCPプロンプト定義 ─────────────────────────────────
+
+// プロンプト一覧
+server.setRequestHandler(ListPromptsRequestSchema, async () => ({
+  prompts: [
+    {
+      name: "stylist",
+      description: "AI Personal Stylistのシステムプロンプト。会話開始時に参照。",
+    },
+  ],
+}));
+
+// プロンプト取得
+server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+  const { name } = request.params;
+  if (name === "stylist") {
+    const promptContent = fs.readFileSync(
+      path.join(__dirname, "..", "prompts", "stylist.md"),
+      "utf-8"
+    );
+    return {
+      messages: [
+        {
+          role: "user",
+          content: { type: "text", text: promptContent },
+        },
+      ],
+    };
+  }
+  throw new Error(`不明なプロンプト: ${name}`);
 });
 
 // ─── 起動 ──────────────────────────────────────────────
