@@ -1082,6 +1082,19 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const mode = args.mode;
 
       if (mode === "get_questions") {
+        // 選択肢の順序をシャッフルして順序バイアスを防ぐ
+        const shuffled = SKELETON_QUESTIONS.map((q) => {
+          const indexed = q.options.map((o, idx) => ({ origIndex: idx, label: o.label }));
+          for (let i = indexed.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [indexed[i], indexed[j]] = [indexed[j], indexed[i]];
+          }
+          return {
+            id: q.id,
+            question: q.question,
+            options: indexed.map((o) => ({ index: o.origIndex, label: o.label })),
+          };
+        });
         return {
           content: [
             {
@@ -1089,13 +1102,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               text: JSON.stringify(
                 {
                   total: SKELETON_QUESTIONS.length,
-                  questions: SKELETON_QUESTIONS.map((q) => ({
-                    id: q.id,
-                    question: q.question,
-                    options: q.options.map((o, idx) => ({ index: idx, label: o.label })),
-                  })),
+                  questions: shuffled,
                   instruction:
-                    "各質問に対して選択肢のインデックス（0始まり）で回答してください。全問回答後に mode='evaluate' で判定を呼び出してください。",
+                    "各質問に対して選択肢のindex値で回答してください。全問回答後に mode='evaluate' で判定を呼び出してください。",
                 },
                 null,
                 2
@@ -1163,6 +1172,18 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const mode = args.mode;
 
       if (mode === "get_questions") {
+        const shuffledColor = COLOR_QUESTIONS.map((q) => {
+          const indexed = q.options.map((o, idx) => ({ origIndex: idx, label: o.label }));
+          for (let i = indexed.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [indexed[i], indexed[j]] = [indexed[j], indexed[i]];
+          }
+          return {
+            id: q.id,
+            question: q.question,
+            options: indexed.map((o) => ({ index: o.origIndex, label: o.label })),
+          };
+        });
         return {
           content: [
             {
@@ -1170,13 +1191,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               text: JSON.stringify(
                 {
                   total: COLOR_QUESTIONS.length,
-                  questions: COLOR_QUESTIONS.map((q) => ({
-                    id: q.id,
-                    question: q.question,
-                    options: q.options.map((o, idx) => ({ index: idx, label: o.label })),
-                  })),
+                  questions: shuffledColor,
                   instruction:
-                    "各質問に対して選択肢のインデックス（0始まり）で回答してください。全問回答後に mode='evaluate' で判定を呼び出してください。",
+                    "各質問に対して選択肢のindex値で回答してください。全問回答後に mode='evaluate' で判定を呼び出してください。",
                 },
                 null,
                 2
