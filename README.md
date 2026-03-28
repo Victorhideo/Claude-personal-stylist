@@ -1,6 +1,168 @@
 # 👔 Claude-Personal-Stylist
 
-**[🇯🇵 日本語](#-日本語)** | **[🇬🇧 English](#-english)**
+**[🇬🇧 English](#-english)** | **[🇯🇵 日本語](#-日本語)**
+
+---
+
+# 🇬🇧 English
+
+## Find what suits YOU from your favorite brands — AI Personal Stylist
+
+> **For people who love fashion but lack confidence in their taste, and are too lazy to research.**
+> This AI stylist combines X (Twitter) trends, your body type, personal color analysis,
+> and favorite brand aesthetics to tell you exactly what to buy.
+>
+> **Works with any fashion site.** UNIQLO, ZARA, SSENSE, ZOZOTOWN,
+> Jil Sander, Lemaire… just add a URL.
+
+### ✨ Features
+
+- 🛒 **Shop recommendations from any brand** — just add URLs to your profile
+- 📐 **Body type & personal color analysis** — size & color suggestions tailored to your physique
+- 🔥 **X (Twitter) trend tracking** — finds viral items and must-buys
+- 🎨 **Taste matching** — Jil Sander minimalism, Italian classic, Scandi clean, etc.
+- 👤 **Style icon references** — incorporates influencer & celebrity aesthetics
+- 🔗 **Direct product links** — click and buy
+
+### 🚀 Setup (15 min)
+
+#### Prerequisites
+
+| Requirement | Notes |
+|---|---|
+| **Claude Pro** ($20/mo) | Sign up at [claude.ai](https://claude.ai) |
+| **Claude Desktop app** | [Download](https://claude.ai/download) |
+| **Node.js** (v18+) | [Download](https://nodejs.org/) |
+| **Git** | [Download](https://git-scm.com/) |
+
+#### Step 1: Clone this repo
+
+```bash
+git clone https://github.com/wat-hiroaki/Claude-personal-stylist.git
+cd claude-personal-stylist
+npm install
+npm run setup   # Installs Playwright browser
+```
+
+#### Step 1.5: Set up X API key (optional)
+
+For fetching trending fashion items directly from X (Twitter) with engagement data.
+**Works without it** — falls back to Google search for X posts automatically.
+
+> ⚠️ As of 2026, X API uses **pay-per-use** pricing. No subscriptions.
+> You buy credits upfront, charged per request. Light usage costs ~$5–25/month.
+
+1. Visit [X Developer Portal](https://developer.x.com/en/portal/dashboard)
+2. Sign up → Create an App
+3. Purchase credits in the Developer Console
+4. Get your **Bearer Token**
+5. Copy the env template and paste your token:
+
+```bash
+cp .env.example .env
+# Edit .env and paste your token after X_BEARER_TOKEN=
+```
+
+> 💡 With X API: engagement-sorted results (likes, RTs). Without: Google-sourced X posts.
+
+#### Step 2: Set up your profile
+
+Edit `profile.json` with your info. Leave fields as `""` if unsure — the AI will ask.
+
+```json
+{
+  "name": "Your Name",
+  "gender": "male",
+  "body": {
+    "height_cm": 175,
+    "weight_kg": 70,
+    "skeleton_type": "natural",
+    "face_type": "oval",
+    "personal_color": "autumn"
+  },
+  "taste": {
+    "target_vibes": ["Jil Sander minimalism", "Italian classic"],
+    "favorite_brands": ["Jil Sander", "Lemaire", "COS"],
+    "favorite_people": ["Ryan Gosling"],
+    "avoid": ["streetwear", "loud logos"]
+  },
+  "shopping": {
+    "budget_per_item_yen": 10000,
+    "stores": [
+      { "name": "SSENSE", "urls": ["https://www.ssense.com/en-us/men"] }
+    ],
+    "preferred_sizes": { "tops": "M", "bottoms": "32", "shoes_cm": 27.0 }
+  }
+}
+```
+
+> 💡 **Don't know your body type?** → Ask Claude "Analyze my body type" with a photo.
+
+#### Step 3: Add MCP config to Claude Desktop
+
+Open your Claude Desktop config:
+
+- **Mac**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+
+Add (merge into existing `mcpServers` if present):
+
+```json
+{
+  "mcpServers": {
+    "claude-personal-stylist": {
+      "command": "node",
+      "args": ["<FULL_PATH>/claude-personal-stylist/src/index.js"],
+      "env": {}
+    }
+  }
+}
+```
+
+> 📌 Run `pwd` in the repo folder to find the full path.
+
+#### Step 4: Restart Claude Desktop
+
+Fully quit and reopen. A 🔧 icon in the bottom left means it's connected!
+
+### 🗣️ Usage
+
+Open Claude Desktop and just ask:
+
+```
+What should I buy from UNIQLO right now?
+```
+```
+Style me like Jil Sander using ZARA pieces
+```
+```
+What's trending on X for menswear this week?
+```
+```
+Build me a full outfit for a date. Budget $100. Use UNIQLO + ZARA.
+```
+
+### 🔧 Customization
+
+**Change taste** → Edit `taste.target_vibes` in `profile.json`
+
+**Add stores** → Add any fashion site URL to `shopping.stores`:
+
+```json
+"stores": [
+  { "name": "SSENSE", "urls": ["https://www.ssense.com/en-us/men/sale"] },
+  { "name": "Mr Porter", "urls": ["https://www.mrporter.com/en-us/mens/clothing"] },
+  { "name": "COS", "urls": ["https://www.cos.com/en/men/new-arrivals.html"] }
+]
+```
+
+### ❓ FAQ
+
+**Q: Do I need coding skills?** → No. Copy-paste Steps 1–4 and edit `profile.json`.
+
+**Q: Is it free?** → You need Claude Pro ($20/mo). Everything else is free.
+
+**Q: Where is my data stored?** → Everything local. Data is sent to Anthropic only during API calls, per their [privacy policy](https://www.anthropic.com/policies).
 
 ---
 
@@ -167,168 +329,6 @@ Xで今話題のユニクロアイテムある？
 **Q: 無料で使える？** → Claude Pro（$20/月）が必要。それ以外は無料。
 
 **Q: データはどこに保存される？** → すべてローカル。Anthropicの[利用規約](https://www.anthropic.com/policies)に基づきAPI通信時のみデータが送信されます。
-
----
-
-# 🇬🇧 English
-
-## Find what suits YOU from your favorite brands — AI Personal Stylist
-
-> **For people who love fashion but lack confidence in their taste, and are too lazy to research.**
-> This AI stylist combines X (Twitter) trends, your body type, personal color analysis,
-> and favorite brand aesthetics to tell you exactly what to buy.
->
-> **Works with any fashion site.** UNIQLO, ZARA, SSENSE, ZOZOTOWN,
-> Jil Sander, Lemaire… just add a URL.
-
-### ✨ Features
-
-- 🛒 **Shop recommendations from any brand** — just add URLs to your profile
-- 📐 **Body type & personal color analysis** — size & color suggestions tailored to your physique
-- 🔥 **X (Twitter) trend tracking** — finds viral items and must-buys
-- 🎨 **Taste matching** — Jil Sander minimalism, Italian classic, Scandi clean, etc.
-- 👤 **Style icon references** — incorporates influencer & celebrity aesthetics
-- 🔗 **Direct product links** — click and buy
-
-### 🚀 Setup (15 min)
-
-#### Prerequisites
-
-| Requirement | Notes |
-|---|---|
-| **Claude Pro** ($20/mo) | Sign up at [claude.ai](https://claude.ai) |
-| **Claude Desktop app** | [Download](https://claude.ai/download) |
-| **Node.js** (v18+) | [Download](https://nodejs.org/) |
-| **Git** | [Download](https://git-scm.com/) |
-
-#### Step 1: Clone this repo
-
-```bash
-git clone https://github.com/wat-hiroaki/Claude-personal-stylist.git
-cd claude-personal-stylist
-npm install
-npm run setup   # Installs Playwright browser
-```
-
-#### Step 1.5: Set up X API key (optional)
-
-For fetching trending fashion items directly from X (Twitter) with engagement data.
-**Works without it** — falls back to Google search for X posts automatically.
-
-> ⚠️ As of 2026, X API uses **pay-per-use** pricing. No subscriptions.
-> You buy credits upfront, charged per request. Light usage costs ~$5–25/month.
-
-1. Visit [X Developer Portal](https://developer.x.com/en/portal/dashboard)
-2. Sign up → Create an App
-3. Purchase credits in the Developer Console
-4. Get your **Bearer Token**
-5. Copy the env template and paste your token:
-
-```bash
-cp .env.example .env
-# Edit .env and paste your token after X_BEARER_TOKEN=
-```
-
-> 💡 With X API: engagement-sorted results (likes, RTs). Without: Google-sourced X posts.
-
-#### Step 2: Set up your profile
-
-Edit `profile.json` with your info. Leave fields as `""` if unsure — the AI will ask.
-
-```json
-{
-  "name": "Your Name",
-  "gender": "male",
-  "body": {
-    "height_cm": 175,
-    "weight_kg": 70,
-    "skeleton_type": "natural",
-    "face_type": "oval",
-    "personal_color": "autumn"
-  },
-  "taste": {
-    "target_vibes": ["Jil Sander minimalism", "Italian classic"],
-    "favorite_brands": ["Jil Sander", "Lemaire", "COS"],
-    "favorite_people": ["Ryan Gosling"],
-    "avoid": ["streetwear", "loud logos"]
-  },
-  "shopping": {
-    "budget_per_item_yen": 10000,
-    "stores": [
-      { "name": "SSENSE", "urls": ["https://www.ssense.com/en-us/men"] }
-    ],
-    "preferred_sizes": { "tops": "M", "bottoms": "32", "shoes_cm": 27.0 }
-  }
-}
-```
-
-> 💡 **Don't know your body type?** → Ask Claude "Analyze my body type" with a photo.
-
-#### Step 3: Add MCP config to Claude Desktop
-
-Open your Claude Desktop config:
-
-- **Mac**: `~/Library/Application Support/Claude/claude_desktop_config.json`
-- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
-
-Add (merge into existing `mcpServers` if present):
-
-```json
-{
-  "mcpServers": {
-    "claude-personal-stylist": {
-      "command": "node",
-      "args": ["<FULL_PATH>/claude-personal-stylist/src/index.js"],
-      "env": {}
-    }
-  }
-}
-```
-
-> 📌 Run `pwd` in the repo folder to find the full path.
-
-#### Step 4: Restart Claude Desktop
-
-Fully quit and reopen. A 🔧 icon in the bottom left means it's connected!
-
-### 🗣️ Usage
-
-Open Claude Desktop and just ask:
-
-```
-What should I buy from UNIQLO right now?
-```
-```
-Style me like Jil Sander using ZARA pieces
-```
-```
-What's trending on X for menswear this week?
-```
-```
-Build me a full outfit for a date. Budget $100. Use UNIQLO + ZARA.
-```
-
-### 🔧 Customization
-
-**Change taste** → Edit `taste.target_vibes` in `profile.json`
-
-**Add stores** → Add any fashion site URL to `shopping.stores`:
-
-```json
-"stores": [
-  { "name": "SSENSE", "urls": ["https://www.ssense.com/en-us/men/sale"] },
-  { "name": "Mr Porter", "urls": ["https://www.mrporter.com/en-us/mens/clothing"] },
-  { "name": "COS", "urls": ["https://www.cos.com/en/men/new-arrivals.html"] }
-]
-```
-
-### ❓ FAQ
-
-**Q: Do I need coding skills?** → No. Copy-paste Steps 1–4 and edit `profile.json`.
-
-**Q: Is it free?** → You need Claude Pro ($20/mo). Everything else is free.
-
-**Q: Where is my data stored?** → Everything local. Data is sent to Anthropic only during API calls, per their [privacy policy](https://www.anthropic.com/policies).
 
 ---
 
