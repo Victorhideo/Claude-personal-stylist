@@ -1,29 +1,51 @@
 {
   "name": "",
   "gender": "",
+  "age_range": "",
 
   "body": {
     "height_cm": null,
     "weight_kg": null,
     "skeleton_type": "",
     "face_type": "",
-    "personal_color": ""
+    "personal_color": "",
+    "shoulder_width": "",
+    "body_shape": "",
+    "concerns": []
+  },
+
+  "lifestyle": {
+    "occupation": "",
+    "dress_code": "",
+    "main_scenes": [],
+    "climate": ""
   },
 
   "taste": {
     "target_vibes": [],
     "favorite_brands": [],
     "favorite_people": [],
-    "avoid": []
+    "avoid": [],
+    "preferred_fit": "",
+    "color_preference": "",
+    "pattern_preference": []
+  },
+
+  "wardrobe": {
+    "key_items": [],
+    "missing_items": [],
+    "seasonal_gaps": []
   },
 
   "shopping": {
     "budget_per_item_yen": null,
+    "monthly_budget_yen": null,
     "preferred_sizes": {
       "tops": "",
       "bottoms": "",
       "shoes_cm": null
     },
+    "size_notes": "",
     "stores": [
       {
         "name": "UNIQLO",
@@ -39,7 +61,8 @@
           "https://www.zara.com/jp/ja/man-l1.html"
         ]
       }
-    ]
+    ],
+    "material_restrictions": []
   },
 
   "trend_queries": [
@@ -47,5 +70,11 @@
     "ZARA おすすめ メンズ 春"
   ],
 
-  "pinterest_board_urls": []
+  "pinterest_board_urls": [],
+
+  "diagnosis_history": {
+    "skeleton_diagnosed_at": null,
+    "color_diagnosed_at": null,
+    "last_updated": null
+  }
 }

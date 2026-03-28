@@ -456,6 +456,354 @@ async function searchTrends(query) {
   }
 }
 
+// ─── 骨格診断 ─────────────────────────────────────────
+
+/**
+ * 骨格診断の15問リスト。
+ * 各選択肢は { label, scores } 形式で、加算するタイプスコアを保持する。
+ */
+const SKELETON_QUESTIONS = [
+  {
+    id: 1,
+    question: "手首を反対の手で掴んだとき、指と指の関係は？",
+    options: [
+      { label: "余る（隙間ができる）", scores: { wave: 1 } },
+      { label: "ぴったり重なる", scores: { straight: 1 } },
+      { label: "骨が当たって痛い", scores: { natural: 1 } },
+    ],
+  },
+  {
+    id: 2,
+    question: "肩の特徴は？",
+    options: [
+      { label: "薄くなで肩ぎみ", scores: { wave: 1 } },
+      { label: "しっかりしていて厚みがある", scores: { straight: 1 } },
+      { label: "骨ばっていて角張っている", scores: { natural: 1 } },
+    ],
+  },
+  {
+    id: 3,
+    question: "首の印象は？",
+    options: [
+      { label: "細く長め", scores: { wave: 1 } },
+      { label: "短めで太め", scores: { straight: 1 } },
+      { label: "太めでしっかりしている", scores: { natural: 1 } },
+    ],
+  },
+  {
+    id: 4,
+    question: "膝の形は？",
+    options: [
+      { label: "小さくてあまり目立たない", scores: { wave: 1 } },
+      { label: "丸みがあってコンパクト", scores: { straight: 1 } },
+      { label: "大きくて骨張っている", scores: { natural: 1 } },
+    ],
+  },
+  {
+    id: 5,
+    question: "鎖骨の見え方は？",
+    options: [
+      { label: "あまり目立たない", scores: { wave: 1 } },
+      { label: "少し見える", scores: { straight: 1 } },
+      { label: "くっきり見える・骨張っている", scores: { natural: 1 } },
+    ],
+  },
+  {
+    id: 6,
+    question: "手の印象は？",
+    options: [
+      { label: "小さくてやわらかい", scores: { wave: 1 } },
+      { label: "やわらかくて厚みがある", scores: { straight: 1 } },
+      { label: "大きくて骨っぽい・関節が目立つ", scores: { natural: 1 } },
+    ],
+  },
+  {
+    id: 7,
+    question: "全体のシルエットの特徴は？",
+    options: [
+      { label: "上半身が小さく下半身に肉がつきやすい（洋ナシ型）", scores: { wave: 1 } },
+      { label: "全体的に筋肉質でメリハリがある（砂時計型）", scores: { straight: 1 } },
+      { label: "全体的にフラットで骨格が目立つ（直線的）", scores: { natural: 1 } },
+    ],
+  },
+  {
+    id: 8,
+    question: "肌の質感は？",
+    options: [
+      { label: "やわらかくてもちもち", scores: { wave: 1 } },
+      { label: "ハリと弾力がある", scores: { straight: 1 } },
+      { label: "乾燥しやすくサラッとしている", scores: { natural: 1 } },
+    ],
+  },
+  {
+    id: 9,
+    question: "胸の位置・バストトップは？",
+    options: [
+      { label: "やや低めでふんわりしている", scores: { wave: 1 } },
+      { label: "位置が高くボリュームがある", scores: { straight: 1 } },
+      { label: "やや平坦でボリュームが出にくい", scores: { natural: 1 } },
+    ],
+  },
+  {
+    id: 10,
+    question: "腰の位置は？",
+    options: [
+      { label: "低め", scores: { wave: 1 } },
+      { label: "高め", scores: { straight: 1 } },
+      { label: "どちらでもない・わかりにくい", scores: { natural: 1 } },
+    ],
+  },
+  {
+    id: 11,
+    question: "体の厚みは？",
+    options: [
+      { label: "薄め・平面的", scores: { wave: 1 } },
+      { label: "厚みがある・立体的", scores: { straight: 1 } },
+      { label: "フラットで平ら", scores: { natural: 1 } },
+    ],
+  },
+  {
+    id: 12,
+    question: "太ももの印象は？",
+    options: [
+      { label: "太くなりやすい・肉感的", scores: { wave: 1 } },
+      { label: "筋肉質でしっかりしている", scores: { straight: 1 } },
+      { label: "細くてやせている印象", scores: { natural: 1 } },
+    ],
+  },
+  {
+    id: 13,
+    question: "ふくらはぎの形は？",
+    options: [
+      { label: "丸みがあってふくらみやすい", scores: { wave: 1 } },
+      { label: "筋肉のラインがわかる", scores: { straight: 1 } },
+      { label: "細くて骨のラインが出やすい", scores: { natural: 1 } },
+    ],
+  },
+  {
+    id: 14,
+    question: "足首の印象は？",
+    options: [
+      { label: "細くてきれい", scores: { wave: 1 } },
+      { label: "ほどよい太さ・しっかりしている", scores: { straight: 1 } },
+      { label: "くるぶしの骨が出ている・細い", scores: { natural: 1 } },
+    ],
+  },
+  {
+    id: 15,
+    question: "体重の変動に対して体型はどう変わる？",
+    options: [
+      { label: "下半身に肉がつきやすい", scores: { wave: 1 } },
+      { label: "全体的に均等につく", scores: { straight: 1 } },
+      { label: "あまり体型の変化を感じにくい", scores: { natural: 1 } },
+    ],
+  },
+];
+
+/**
+ * 骨格診断を評価する純粋な関数。
+ * @param {number[]} answers - 各質問に対する選択肢インデックス（0始まり）の配列
+ * @returns {{ type: string, scores: object, confidence: number }}
+ */
+function evaluateSkeleton(answers) {
+  const scores = { straight: 0, wave: 0, natural: 0 };
+
+  for (let i = 0; i < Math.min(answers.length, SKELETON_QUESTIONS.length); i++) {
+    const q = SKELETON_QUESTIONS[i];
+    const answerIndex = answers[i];
+    if (answerIndex == null || answerIndex < 0 || answerIndex >= q.options.length) continue;
+    const option = q.options[answerIndex];
+    for (const [type, point] of Object.entries(option.scores)) {
+      scores[type] = (scores[type] || 0) + point;
+    }
+  }
+
+  const total = Object.values(scores).reduce((a, b) => a + b, 0);
+  const sorted = Object.entries(scores).sort(([, a], [, b]) => b - a);
+  const topType = sorted[0][0];
+  const confidence = total > 0 ? sorted[0][1] / total : 0;
+
+  return {
+    type: topType,
+    scores,
+    confidence: Math.round(confidence * 100) / 100,
+  };
+}
+
+// ─── パーソナルカラー診断 ────────────────────────────────
+
+/**
+ * パーソナルカラー診断の10問リスト。
+ * spring / summer / autumn / winter の4シーズン。
+ */
+const COLOR_QUESTIONS = [
+  {
+    id: 1,
+    question: "手首の内側の血管の色は？",
+    options: [
+      { label: "緑がかっている", scores: { spring: 1, autumn: 1 } },
+      { label: "青紫がかっている", scores: { summer: 1, winter: 1 } },
+    ],
+  },
+  {
+    id: 2,
+    question: "日焼けするとどうなる？",
+    options: [
+      { label: "赤くなりやすく、あまり黒くならない", scores: { summer: 1, winter: 1 } },
+      { label: "わりとすぐ黒くなる", scores: { spring: 1, autumn: 1 } },
+    ],
+  },
+  {
+    id: 3,
+    question: "似合うアクセサリーの素材は？",
+    options: [
+      { label: "ゴールド・ブロンズ系", scores: { spring: 1, autumn: 1 } },
+      { label: "シルバー・プラチナ系", scores: { summer: 1, winter: 1 } },
+    ],
+  },
+  {
+    id: 4,
+    question: "肌の色味の印象は？",
+    options: [
+      { label: "黄みがかっている（イエローベース）", scores: { spring: 1, autumn: 1 } },
+      { label: "青みがかっている（ブルーベース）", scores: { summer: 1, winter: 1 } },
+    ],
+  },
+  {
+    id: 5,
+    question: "目の色は？",
+    options: [
+      { label: "明るいブラウン・ゴールデンブラウン", scores: { spring: 2 } },
+      { label: "やわらかいブラウン・グレーがかったブラウン", scores: { summer: 2 } },
+      { label: "濃いダークブラウン・赤みがかったブラウン", scores: { autumn: 2 } },
+      { label: "ダークブラウン・ブラック・コントラストが強い", scores: { winter: 2 } },
+    ],
+  },
+  {
+    id: 6,
+    question: "髪の色（地毛）は？",
+    options: [
+      { label: "明るいブラウン・やわらかいこげ茶", scores: { spring: 1, autumn: 1 } },
+      { label: "アッシュブラウン・グレーがかった茶色", scores: { summer: 2 } },
+      { label: "濃いこげ茶・赤みのある黒", scores: { autumn: 1 } },
+      { label: "青みのある黒・真っ黒", scores: { winter: 2 } },
+    ],
+  },
+  {
+    id: 7,
+    question: "白を着たとき顔色はどうなる？",
+    options: [
+      { label: "顔色が明るく見える・なじむ", scores: { spring: 1, summer: 1, winter: 1 } },
+      { label: "顔色が悪く見える・浮いた感じになる", scores: { autumn: 1 } },
+    ],
+  },
+  {
+    id: 8,
+    question: "黒を着たとき顔色はどうなる？",
+    options: [
+      { label: "顔色が暗くなる・老けて見える", scores: { spring: 1, summer: 1 } },
+      { label: "シャープでかっこよく見える", scores: { winter: 1 } },
+      { label: "落ち着いてなじむ", scores: { autumn: 1 } },
+    ],
+  },
+  {
+    id: 9,
+    question: "得意なカラーグループはどれ？",
+    options: [
+      { label: "コーラル・ピーチ・明るい黄色など明るくキュートな色", scores: { spring: 2 } },
+      { label: "ラベンダー・ローズ・くすんだピンクなどやわらかい色", scores: { summer: 2 } },
+      { label: "テラコッタ・カーキ・マスタードなど深みのある色", scores: { autumn: 2 } },
+      { label: "ビビッドなレッド・ネイビー・コントラストのある色", scores: { winter: 2 } },
+    ],
+  },
+  {
+    id: 10,
+    question: "肌の印象は？",
+    options: [
+      { label: "明るくツヤがある・うすい", scores: { spring: 1 } },
+      { label: "やわらかくマットがかっている・ピンク寄り", scores: { summer: 1 } },
+      { label: "ツヤと深みがある・濃いめ", scores: { autumn: 1 } },
+      { label: "クールでマット・色白または濃い", scores: { winter: 1 } },
+    ],
+  },
+];
+
+/**
+ * パーソナルカラー診断を評価する純粋な関数。
+ * @param {number[]} answers - 各質問に対する選択肢インデックス（0始まり）の配列
+ * @returns {{ type: string, scores: object, confidence: number }}
+ */
+function evaluateColor(answers) {
+  const scores = { spring: 0, summer: 0, autumn: 0, winter: 0 };
+
+  for (let i = 0; i < Math.min(answers.length, COLOR_QUESTIONS.length); i++) {
+    const q = COLOR_QUESTIONS[i];
+    const answerIndex = answers[i];
+    if (answerIndex == null || answerIndex < 0 || answerIndex >= q.options.length) continue;
+    const option = q.options[answerIndex];
+    for (const [type, point] of Object.entries(option.scores)) {
+      scores[type] = (scores[type] || 0) + point;
+    }
+  }
+
+  const total = Object.values(scores).reduce((a, b) => a + b, 0);
+  const sorted = Object.entries(scores).sort(([, a], [, b]) => b - a);
+  const topType = sorted[0][0];
+  const confidence = total > 0 ? sorted[0][1] / total : 0;
+
+  return {
+    type: topType,
+    scores,
+    confidence: Math.round(confidence * 100) / 100,
+  };
+}
+
+// ─── プロフィール保存（ドット記法対応） ──────────────────
+
+/**
+ * ドット記法のキー（例: "body.skeleton_type"）でオブジェクトの深い値を設定する。
+ * @param {object} obj - 対象オブジェクト
+ * @param {string} dotKey - ドット区切りのキーパス
+ * @param {unknown} value - 設定する値
+ */
+function setByDotKey(obj, dotKey, value) {
+  const keys = dotKey.split(".");
+  let current = obj;
+  for (let i = 0; i < keys.length - 1; i++) {
+    const key = keys[i];
+    if (current[key] == null || typeof current[key] !== "object") {
+      current[key] = {};
+    }
+    current = current[key];
+  }
+  current[keys[keys.length - 1]] = value;
+}
+
+/**
+ * profile.json を読み込み、指定したキー群を更新して書き戻す。
+ * @param {Array<{key: string, value: unknown}>} updates
+ * @returns {{ success: boolean, updated: object, profile: object }}
+ */
+function saveProfileFields(updates) {
+  let profile = {};
+  try {
+    const raw = fs.readFileSync(PROFILE_PATH, "utf-8");
+    profile = JSON.parse(raw);
+  } catch {
+    // 既存ファイルがなければ空オブジェクトから開始
+  }
+
+  const updated = {};
+  for (const { key, value } of updates) {
+    setByDotKey(profile, key, value);
+    updated[key] = value;
+  }
+
+  fs.writeFileSync(PROFILE_PATH, JSON.stringify(profile, null, 2), "utf-8");
+
+  return { success: true, updated, profile };
+}
+
 // ─── MCPサーバー定義 ───────────────────────────────────
 const server = new Server(
   {
@@ -553,6 +901,78 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ["query"],
       },
     },
+    {
+      name: "diagnose_skeleton",
+      description:
+        "骨格診断ツール。mode='get_questions' で15問の質問リストを返し、mode='evaluate' で回答配列から骨格タイプ（straight/wave/natural）を判定します。",
+      inputSchema: {
+        type: "object",
+        properties: {
+          mode: {
+            type: "string",
+            enum: ["get_questions", "evaluate"],
+            description: "get_questions: 質問リストを取得 / evaluate: 回答を評価して判定",
+          },
+          answers: {
+            type: "array",
+            items: { type: "number" },
+            description:
+              "mode='evaluate' のとき必須。各質問への回答選択肢インデックス（0始まり）の配列。長さは1〜15。",
+          },
+        },
+        required: ["mode"],
+      },
+    },
+    {
+      name: "diagnose_color",
+      description:
+        "パーソナルカラー診断ツール。mode='get_questions' で10問の質問リストを返し、mode='evaluate' で回答配列からパーソナルカラー（spring/summer/autumn/winter）を判定します。",
+      inputSchema: {
+        type: "object",
+        properties: {
+          mode: {
+            type: "string",
+            enum: ["get_questions", "evaluate"],
+            description: "get_questions: 質問リストを取得 / evaluate: 回答を評価して判定",
+          },
+          answers: {
+            type: "array",
+            items: { type: "number" },
+            description:
+              "mode='evaluate' のとき必須。各質問への回答選択肢インデックス（0始まり）の配列。長さは1〜10。",
+          },
+        },
+        required: ["mode"],
+      },
+    },
+    {
+      name: "save_profile",
+      description:
+        "AIが推奨するプロフィール値をユーザーの承認後にprofile.jsonへ保存します。ドット記法（例: 'body.skeleton_type'）で深いキーの更新が可能。複数キーの一括更新にも対応。",
+      inputSchema: {
+        type: "object",
+        properties: {
+          updates: {
+            type: "array",
+            description: "更新するキーと値のペア一覧",
+            items: {
+              type: "object",
+              properties: {
+                key: {
+                  type: "string",
+                  description: "ドット記法のキーパス（例: 'body.skeleton_type', 'color.season'）",
+                },
+                value: {
+                  description: "設定する値（文字列・数値・配列・オブジェクト何でも可）",
+                },
+              },
+              required: ["key", "value"],
+            },
+          },
+        },
+        required: ["updates"],
+      },
+    },
   ],
 }));
 
@@ -609,6 +1029,212 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return {
         content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
       };
+    }
+
+    case "diagnose_skeleton": {
+      const mode = args.mode;
+
+      if (mode === "get_questions") {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                {
+                  total: SKELETON_QUESTIONS.length,
+                  questions: SKELETON_QUESTIONS.map((q) => ({
+                    id: q.id,
+                    question: q.question,
+                    options: q.options.map((o, idx) => ({ index: idx, label: o.label })),
+                  })),
+                  instruction:
+                    "各質問に対して選択肢のインデックス（0始まり）で回答してください。全問回答後に mode='evaluate' で判定を呼び出してください。",
+                },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      }
+
+      if (mode === "evaluate") {
+        if (!Array.isArray(args.answers) || args.answers.length === 0) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify({
+                  error: "answers が必要です。各質問への回答インデックス配列を渡してください。",
+                }),
+              },
+            ],
+          };
+        }
+
+        const result = evaluateSkeleton(args.answers);
+        const typeLabels = {
+          straight: "ストレート",
+          wave: "ウェーブ",
+          natural: "ナチュラル",
+        };
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                {
+                  ...result,
+                  type_ja: typeLabels[result.type] ?? result.type,
+                  answered: args.answers.length,
+                  total: SKELETON_QUESTIONS.length,
+                  suggestion:
+                    result.confidence >= 0.5
+                      ? `骨格タイプは「${typeLabels[result.type]}」と判定しました（確信度 ${Math.round(result.confidence * 100)}%）。プロフィールに保存しますか？`
+                      : `スコアが拮抗しています（確信度 ${Math.round(result.confidence * 100)}%）。回答を見直すか、専門家の診断を併用することをお勧めします。`,
+                },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      }
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({ error: `不明な mode: ${mode}。'get_questions' または 'evaluate' を指定してください。` }),
+          },
+        ],
+      };
+    }
+
+    case "diagnose_color": {
+      const mode = args.mode;
+
+      if (mode === "get_questions") {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                {
+                  total: COLOR_QUESTIONS.length,
+                  questions: COLOR_QUESTIONS.map((q) => ({
+                    id: q.id,
+                    question: q.question,
+                    options: q.options.map((o, idx) => ({ index: idx, label: o.label })),
+                  })),
+                  instruction:
+                    "各質問に対して選択肢のインデックス（0始まり）で回答してください。全問回答後に mode='evaluate' で判定を呼び出してください。",
+                },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      }
+
+      if (mode === "evaluate") {
+        if (!Array.isArray(args.answers) || args.answers.length === 0) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify({
+                  error: "answers が必要です。各質問への回答インデックス配列を渡してください。",
+                }),
+              },
+            ],
+          };
+        }
+
+        const result = evaluateColor(args.answers);
+        const typeLabels = {
+          spring: "スプリング（春）",
+          summer: "サマー（夏）",
+          autumn: "オータム（秋）",
+          winter: "ウィンター（冬）",
+        };
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                {
+                  ...result,
+                  type_ja: typeLabels[result.type] ?? result.type,
+                  answered: args.answers.length,
+                  total: COLOR_QUESTIONS.length,
+                  suggestion:
+                    result.confidence >= 0.4
+                      ? `パーソナルカラーは「${typeLabels[result.type]}」と判定しました（確信度 ${Math.round(result.confidence * 100)}%）。プロフィールに保存しますか？`
+                      : `スコアが拮抗しています（確信度 ${Math.round(result.confidence * 100)}%）。回答を見直すか、専門家の診断を併用することをお勧めします。`,
+                },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      }
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({ error: `不明な mode: ${mode}。'get_questions' または 'evaluate' を指定してください。` }),
+          },
+        ],
+      };
+    }
+
+    case "save_profile": {
+      if (!Array.isArray(args.updates) || args.updates.length === 0) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                error: "updates が必要です。{ key, value } の配列を渡してください。",
+              }),
+            },
+          ],
+        };
+      }
+
+      try {
+        const result = saveProfileFields(args.updates);
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                {
+                  ...result,
+                  message: `${args.updates.length}件のフィールドを profile.json に保存しました。`,
+                },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      } catch (err) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({ success: false, error: err.message }),
+            },
+          ],
+        };
+      }
     }
 
     default:
