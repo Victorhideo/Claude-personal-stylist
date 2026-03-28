@@ -21,6 +21,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { fileURLToPath } from "url";
 import "dotenv/config";
+import { scoreAndRankProducts } from "./models/style-scorer.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROFILE_PATH = path.join(__dirname, "..", "profile.json");
@@ -33,6 +34,25 @@ function loadProfile() {
   } catch {
     return null;
   }
+}
+
+// ─── ナレッジ一括読み込み ────────────────────────────────
+function loadAllKnowledge() {
+  const KNOWLEDGE_DIR = path.join(__dirname, "..", "knowledge");
+  const files = {
+    skeleton: "skeleton-types.json",
+    color: "personal-colors.json",
+    face: "face-types.json",
+    body: "body-proportions.json",
+    coordination: "coordination-rules.json",
+  };
+  const knowledge = {};
+  for (const [key, filename] of Object.entries(files)) {
+    knowledge[key] = JSON.parse(
+      fs.readFileSync(path.join(KNOWLEDGE_DIR, filename), "utf-8")
+    );
+  }
+  return knowledge;
 }
 
 // ─── 汎用スクレイパー ─────────────────────────────────
@@ -977,6 +997,31 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       },
     },
     {
+      name: "score_items",
+      description: "商品リストをユーザープロフィールに基づいてスコアリング。scrape_productsの結果をプロフィール（骨格・カラー・体型）で評価し、相性スコア(0-100)と理由を付与して返します。",
+      inputSchema: {
+        type: "object",
+        properties: {
+          products: {
+            type: "array",
+            description: "scrape_productsで取得したrawProducts配列",
+            items: {
+              type: "object",
+              properties: {
+                text: { type: "string" },
+                link: { type: "string" },
+                image: { type: "string" },
+                colors: { type: "array", items: { type: "string" } },
+                dimensions: { type: "object" },
+                category: { type: "string" },
+              },
+            },
+          },
+        },
+        required: ["products"],
+      },
+    },
+    {
       name: "get_styling_rules",
       description: "骨格タイプ・パーソナルカラー・顔タイプ・体型補正・コーデルールの専門知識を取得。提案前に必ず参照すること。",
       inputSchema: {
@@ -1295,6 +1340,100 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             {
               type: "text",
               text: JSON.stringify({ success: false, error: err.message }),
+            },
+          ],
+        };
+      }
+    }
+
+    case "score_items": {
+      if (!Array.isArray(args.products) || args.products.length === 0) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                error: "products が必要です。scrape_products で取得した rawProducts 配列を渡してください。",
+              }),
+            },
+          ],
+        };
+      }
+
+      // プロフィール読み込み
+      const scoreProfile = loadProfile();
+      if (!scoreProfile) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                error: "profile.json が見つかりません。まず骨格診断(diagnose_skeleton)とパーソナルカラー診断(diagnose_color)を実行してプロフィールを作成してください。",
+              }),
+            },
+          ],
+        };
+      }
+
+      // プロフィール完全性チェック
+      const scoreMissing = [];
+      if (!scoreProfile.body?.skeleton_type) scoreMissing.push("skeleton_type（骨格タイプ）");
+      if (!scoreProfile.body?.personal_color) scoreMissing.push("personal_color（パーソナルカラー）");
+
+      if (scoreMissing.length > 0) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                warning: `プロフィールが不完全です。不足: ${scoreMissing.join(", ")}。スコアリングはニュートラル値(50)で代替します。`,
+                missing: scoreMissing,
+              }),
+            },
+          ],
+        };
+      }
+
+      try {
+        // ナレッジ読み込み
+        const knowledge = loadAllKnowledge();
+
+        // スコアリング実行
+        const ranked = scoreAndRankProducts({
+          profile: scoreProfile,
+          products: args.products,
+          knowledge,
+        });
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                {
+                  success: true,
+                  count: ranked.length,
+                  ranked: ranked.map(({ product, score }) => ({
+                    totalScore: score.totalScore,
+                    breakdown: score.breakdown,
+                    reasoning: score.reasoning,
+                    recommendations: score.recommendations,
+                    product,
+                  })),
+                  instruction: `${ranked.length}件の商品をスコアリングしました。totalScore(0-100)が高いほどあなたのプロフィールに合っています。上位アイテムを優先的に提案してください。`,
+                },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      } catch (err) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({ success: false, error: `スコアリング中にエラーが発生しました: ${err.message}` }),
             },
           ],
         };
