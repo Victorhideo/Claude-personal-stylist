@@ -57,9 +57,42 @@ function loadAllKnowledge() {
   return knowledge;
 }
 
+// ─── 画像取得ヘルパー ─────────────────────────────────
+/**
+ * URLから画像を取得してbase64エンコードする
+ * Playwrightのページコンテキストを使い、同一セッションのCookieを維持
+ *
+ * @param {import('playwright').Page} page - Playwrightページ
+ * @param {string} imageUrl - 画像URL
+ * @param {number} [maxSizeKB=500] - 最大サイズ（KB）。超過時はスキップ
+ * @returns {Promise<{ data: string, mimeType: string } | null>}
+ */
+async function fetchImageAsBase64(page, imageUrl, maxSizeKB = 500) {
+  try {
+    const response = await page.context().request.get(imageUrl, { timeout: 10000 });
+    if (!response.ok()) return null;
+
+    const buffer = await response.body();
+    if (buffer.length > maxSizeKB * 1024) return null;
+
+    const contentType = response.headers()["content-type"] || "image/jpeg";
+    const mimeType = contentType.split(";")[0].trim();
+
+    // 画像MIMEタイプのみ
+    if (!mimeType.startsWith("image/")) return null;
+
+    return {
+      data: buffer.toString("base64"),
+      mimeType,
+    };
+  } catch {
+    return null;
+  }
+}
+
 // ─── 汎用スクレイパー ─────────────────────────────────
 async function scrapeProducts(url, options = {}) {
-  const { maxItems = 20, category = "", scrollCount = 3 } = options;
+  const { maxItems = 20, category = "", scrollCount = 3, inlineImageCount = 5 } = options;
 
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({
@@ -144,6 +177,17 @@ async function scrapeProducts(url, options = {}) {
         document.querySelector('meta[property="og:title"]')?.content || "",
     }));
 
+    // 先頭N件の商品画像をbase64で取得（Claudeが視覚的に判断できるよう）
+    const inlineImages = [];
+    for (let i = 0; i < Math.min(inlineImageCount, pageData.candidates.length); i++) {
+      const imgUrl = pageData.candidates[i].image;
+      if (!imgUrl) continue;
+      const img = await fetchImageAsBase64(page, imgUrl, 300);
+      if (img) {
+        inlineImages.push({ index: i, productText: pageData.candidates[i].text.slice(0, 80), ...img });
+      }
+    }
+
     await browser.close();
 
     return {
@@ -155,17 +199,14 @@ async function scrapeProducts(url, options = {}) {
       },
       rawProducts: pageData.candidates,
       count: pageData.candidates.length,
+      inlineImages,
       instruction: `
 以下は ${pageData.url} から取得した商品候補の生データです。
 各候補の text フィールドには商品名・価格・説明が混在しています。
-これをもとに、以下の形式に整理してください：
 
-- 商品名
-- 価格（数値）
-- カラー展開
-- サイズ展開
-- 商品URL
-- 画像URL
+【重要】先頭${inlineImages.length}件の商品画像が添付されています。
+スタイリストとして各画像を観察し、テキスト情報と合わせて総合的に判断してください。
+画像から読み取れるシルエット・素材感・色味・ディテールは、テキストだけでは得られない重要な判断材料です。
 
 ユーザーのプロフィール（骨格タイプ、パーソナルカラー、テイスト等）と
 照らし合わせて、似合うアイテムを選んでください。
@@ -246,25 +287,36 @@ async function scrapeProductDetail(url) {
       };
     });
 
+    // 商品画像をbase64で取得（最大3枚）
+    const imageResults = [];
+    const targetImages = (data.images ?? []).slice(0, 3);
+    for (const imgUrl of targetImages) {
+      const img = await fetchImageAsBase64(page, imgUrl);
+      if (img) {
+        imageResults.push(img);
+      }
+    }
+
     await browser.close();
 
     return {
       success: true,
       ...data,
+      imageCount: imageResults.length,
+      images_base64: imageResults,
       instruction: `
 以下は商品詳細ページの情報です。
 structured フィールドにJSON-LDから抽出した構造化データがあります（ある場合）。
 bodyText にはページ本文のテキストが含まれています。
 
-これをもとに以下を特定してください：
-- 商品名、ブランド名
-- 価格
-- 素材・生地
-- サイズ展開と各サイズの寸法（cm）
-- カラー展開
-- 商品の特徴（シルエット、着丈、フィット感）
+【重要】画像が添付されています。スタイリストとして画像を注意深く観察し、以下を判断してください：
+- 実際のシルエット（身幅、着丈のバランス、肩の落ち方）
+- 生地の質感・落ち感（光沢、マット、透け感、厚み）
+- 色のトーン（テキストでは「ブラック」でも実際は墨黒、漆黒、チャコールなど異なる）
+- ディテール（縫製、ボタン、ステッチ、裏地の見え方）
+- 全体の雰囲気（ミニマル/デコラティブ、モード/クラシック、リラックス/構築的）
 
-ユーザーの体型情報と照合して、推奨サイズとカラーを提案してください。
+テキスト情報と画像の両方を総合して、ユーザーの体型情報と照合のうえ推奨サイズ・カラーを提案してください。
 `,
     };
   } catch (err) {
@@ -857,7 +909,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     {
       name: "scrape_products",
       description:
-        "任意のファッションECサイトのURLから商品一覧を取得します。UNIQLO、ZARA、SSENSE、ZOZOTOWN等どんなサイトでも対応。カテゴリページのURLを渡してください。",
+        "任意のファッションECサイトのURLから商品一覧を取得します。UNIQLO、ZARA、SSENSE、ZOZOTOWN等どんなサイトでも対応。カテゴリページのURLを渡してください。先頭数件の商品画像もインラインで返すため、視覚的に判断できます。",
       inputSchema: {
         type: "object",
         properties: {
@@ -872,6 +924,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           category: {
             type: "string",
             description: "カテゴリ名（例: tops, bottoms, outerwear）",
+          },
+          inline_images: {
+            type: "number",
+            description: "インラインで画像を返す商品数（デフォルト: 5、0で画像なし）",
           },
         },
         required: ["url"],
@@ -1156,17 +1212,60 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const result = await scrapeProducts(args.url, {
         maxItems: args.max_items || 20,
         category: args.category || "",
+        inlineImageCount: args.inline_images ?? 5,
       });
-      return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-      };
+
+      // 画像をMCP ImageContentブロックとして返す
+      const contentBlocks = [];
+      const inlineImages = result.inlineImages ?? [];
+      for (const img of inlineImages) {
+        contentBlocks.push({
+          type: "image",
+          data: img.data,
+          mimeType: img.mimeType,
+        });
+        contentBlocks.push({
+          type: "text",
+          text: `↑ 商品${img.index + 1}: ${img.productText}`,
+        });
+      }
+
+      // テキスト情報（画像データ以外）
+      const textResult = { ...result };
+      delete textResult.inlineImages;
+      contentBlocks.push({
+        type: "text",
+        text: JSON.stringify(textResult, null, 2),
+      });
+
+      return { content: contentBlocks };
     }
 
     case "scrape_product_detail": {
       const result = await scrapeProductDetail(args.url);
-      return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-      };
+
+      // レスポンスにMCPのImageContentブロックを含めてClaudeが画像を直接見れるようにする
+      const contentBlocks = [];
+
+      // 画像をImageContentとして追加（Claudeのマルチモーダル能力で分析）
+      const inlineImages = result.images_base64 ?? [];
+      for (const img of inlineImages) {
+        contentBlocks.push({
+          type: "image",
+          data: img.data,
+          mimeType: img.mimeType,
+        });
+      }
+
+      // テキスト情報（画像以外）
+      const textResult = { ...result };
+      delete textResult.images_base64;
+      contentBlocks.push({
+        type: "text",
+        text: JSON.stringify(textResult, null, 2),
+      });
+
+      return { content: contentBlocks };
     }
 
     case "search_x": {
