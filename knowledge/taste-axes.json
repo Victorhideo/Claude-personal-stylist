@@ -118,7 +118,7 @@
     {
       "label": "UNIQLO U",
       "description": "Christophe Lemaire監修のデザイナーズライン。通常UNIQLOよりモード寄り・構築的",
-      "match_patterns": ["ユニクロu", "uniqlo u", "ユニクロ u", "uniqlo:c"],
+      "match_patterns": ["ユニクロu", "uniqlo u", "ユニクロ u"],
       "vector": { "decoration": 10, "formality": 55, "avantgarde": 55, "structure": 55, "playfulness": 10 }
     },
     {
@@ -130,7 +130,7 @@
     {
       "label": "UNIQLO +J",
       "description": "Jil Sander共同制作ライン。ミニマルかつ上質な素材使い",
-      "match_patterns": ["+j", "プラスj", "ジルサンダー"],
+      "match_patterns": ["+j", "プラスj", "uniqlo +j", "ユニクロ +j"],
       "vector": { "decoration": 5, "formality": 65, "avantgarde": 60, "structure": 60, "playfulness": 5 }
     },
     {

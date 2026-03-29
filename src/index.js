@@ -50,9 +50,13 @@ function loadAllKnowledge() {
   };
   const knowledge = {};
   for (const [key, filename] of Object.entries(files)) {
-    knowledge[key] = JSON.parse(
-      fs.readFileSync(path.join(KNOWLEDGE_DIR, filename), "utf-8")
-    );
+    try {
+      knowledge[key] = JSON.parse(
+        fs.readFileSync(path.join(KNOWLEDGE_DIR, filename), "utf-8")
+      );
+    } catch (err) {
+      knowledge[key] = null;
+    }
   }
   return knowledge;
 }
@@ -390,7 +394,7 @@ X APIの設定方法（オプション）:
     }));
 
     // エンゲージメント順にソート
-    tweets.sort((a, b) => b.likes + b.retweets - (a.likes + a.retweets));
+    tweets.sort((a, b) => (b.likes + b.retweets) - (a.likes + a.retweets));
 
     return {
       success: true,
@@ -1041,7 +1045,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
               properties: {
                 key: {
                   type: "string",
-                  description: "ドット記法のキーパス（例: 'body.skeleton_type', 'color.season'）",
+                  description: "ドット記法のキーパス（例: 'body.skeleton_type', 'body.personal_color', 'taste.vector'）",
                 },
                 value: {
                   description: "設定する値（文字列・数値・配列・オブジェクト何でも可）",
@@ -1092,7 +1096,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         properties: {
           category: {
             type: "string",
-            enum: ["skeleton", "color", "face", "body", "coordination", "all"],
+            enum: ["skeleton", "color", "face", "body", "coordination", "taste", "all"],
             description: "取得するルールカテゴリ",
           },
           type: {
@@ -1184,6 +1188,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const missing = [];
       if (!profile.body?.skeleton_type) missing.push("skeleton_type（骨格タイプ）→ diagnose_skeletonを実行");
       if (!profile.body?.personal_color) missing.push("personal_color（パーソナルカラー）→ diagnose_colorを実行");
+      if (!profile.taste?.vector) missing.push("taste.vector（テイスト）→ diagnose_tasteを実行");
       if (!profile.body?.height_cm) missing.push("height_cm（身長）");
       if (!profile.gender) missing.push("gender（性別）");
 
@@ -1534,24 +1539,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      // プロフィール完全性チェック
+      // プロフィール完全性チェック（不足分はニュートラル値50で代替してスコアリング続行）
       const scoreMissing = [];
       if (!scoreProfile.body?.skeleton_type) scoreMissing.push("skeleton_type（骨格タイプ）");
       if (!scoreProfile.body?.personal_color) scoreMissing.push("personal_color（パーソナルカラー）");
-
-      if (scoreMissing.length > 0) {
-        return {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify({
-                warning: `プロフィールが不完全です。不足: ${scoreMissing.join(", ")}。スコアリングはニュートラル値(50)で代替します。`,
-                missing: scoreMissing,
-              }),
-            },
-          ],
-        };
-      }
+      if (!scoreProfile.taste?.vector) scoreMissing.push("taste.vector（テイスト）");
 
       try {
         // ナレッジ読み込み
@@ -1573,6 +1565,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               text: JSON.stringify(
                 {
                   success: true,
+                  ...(scoreMissing.length > 0 ? { warning: `プロフィール不完全（${scoreMissing.join(", ")}）。該当軸はニュートラル値(50)で代替。` } : {}),
                   count: ranked.length,
                   ranked: ranked.map(({ product, score }) => ({
                     totalScore: score.totalScore,
@@ -1609,6 +1602,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         face: "face-types.json",
         body: "body-proportions.json",
         coordination: "coordination-rules.json",
+        taste: "taste-axes.json",
       };
 
       try {
@@ -1681,11 +1675,22 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const tasteKnowledge = knowledge.taste;
 
       if (args.mode === "get_questions") {
-        const questions = tasteKnowledge.diagnosis_questions.questions.map((q) => ({
-          id: q.id,
-          text: q.text,
-          options: q.options.map((o, idx) => ({ index: idx, text: o.text })),
-        }));
+        const questions = tasteKnowledge.diagnosis_questions.questions.map((q) => {
+          // 選択肢をシャッフルして順序バイアスを防止（diagnose_skeleton/colorと同じパターン）
+          const indices = q.options.map((_, idx) => idx);
+          for (let i = indices.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [indices[i], indices[j]] = [indices[j], indices[i]];
+          }
+          return {
+            id: q.id,
+            text: q.text,
+            options: indices.map((origIdx) => ({
+              index: origIdx,
+              text: q.options[origIdx].text,
+            })),
+          };
+        });
         return {
           content: [
             {

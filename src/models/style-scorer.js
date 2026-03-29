@@ -133,18 +133,20 @@ export function scoreProduct({ profile, product, knowledge, trendTexts = [] }) {
   const resolvedCategory = productCategory ?? features.itemType ?? "tops";
 
   // 2. カラースコア
-  const personalColor = profile.body?.personal_color ?? profile.color?.season ?? null;
+  const personalColor = profile.body?.personal_color ?? null;
   let colorScore = 50;
   let colorReasoning = "パーソナルカラー情報なし";
 
   if (personalColor && productColors.length > 0) {
-    const colorResult = computeColorScore({
-      personalColor,
-      productColors,
-      colorKnowledge: knowledge.color,
-    });
-    colorScore = colorResult.score;
-    colorReasoning = colorResult.reasoning;
+    try {
+      const colorResult = computeColorScore({
+        personalColor,
+        productColors,
+        colorKnowledge: knowledge.color,
+      });
+      colorScore = colorResult.score;
+      colorReasoning = colorResult.reasoning;
+    } catch { /* ニュートラル値維持 */ }
   } else if (personalColor && productText) {
     colorReasoning = `パーソナルカラー「${personalColor}」。商品カラー情報なし（ニュートラルスコア）`;
   }
@@ -160,17 +162,19 @@ export function scoreProduct({ profile, product, knowledge, trendTexts = [] }) {
   let silhouetteReasoning = "骨格情報なし";
 
   if (skeletonType) {
-    const silResult = computeSilhouetteScore({
-      skeletonType,
-      bodyShape,
-      concerns,
-      gender,
-      productText,
-      skeletonKnowledge: knowledge.skeleton,
-    });
-    silhouetteScore = silResult.silhouetteScore;
-    materialScore = silResult.materialScore;
-    silhouetteReasoning = silResult.reasoning;
+    try {
+      const silResult = computeSilhouetteScore({
+        skeletonType,
+        bodyShape,
+        concerns,
+        gender,
+        productText,
+        skeletonKnowledge: knowledge.skeleton,
+      });
+      silhouetteScore = silResult.silhouetteScore;
+      materialScore = silResult.materialScore;
+      silhouetteReasoning = silResult.reasoning;
+    } catch { /* ニュートラル値維持 */ }
   }
 
   // 4. プロポーションスコア
@@ -179,17 +183,21 @@ export function scoreProduct({ profile, product, knowledge, trendTexts = [] }) {
   let proportionReasoning = "身長情報なし";
 
   if (heightCm && skeletonType) {
-    const propResult = computeProportionScore({
-      heightCm,
-      gender,
-      skeletonType,
-      bodyShape,
-      concerns,
-      productDimensions,
-      productCategory: resolvedCategory,
-    });
-    proportionScore = propResult.score;
-    proportionReasoning = propResult.reasoning;
+    try {
+      const calibration = profile.calibration ?? {};
+      const propResult = computeProportionScore({
+        heightCm,
+        gender,
+        skeletonType,
+        bodyShape,
+        concerns,
+        productDimensions,
+        productCategory: resolvedCategory,
+        calibration,
+      });
+      proportionScore = propResult.score;
+      proportionReasoning = propResult.reasoning;
+    } catch { /* ニュートラル値維持 */ }
   }
 
   // 5. テイストスコア
@@ -198,13 +206,15 @@ export function scoreProduct({ profile, product, knowledge, trendTexts = [] }) {
   let tasteReasoning = "";
 
   if (userTasteVector && knowledge.taste) {
-    const tasteResult = computeTasteScore({
-      userVector: userTasteVector,
-      productText,
-      tasteKnowledge: knowledge.taste,
-    });
-    tasteScore = tasteResult.score;
-    tasteReasoning = tasteResult.reasoning;
+    try {
+      const tasteResult = computeTasteScore({
+        userVector: userTasteVector,
+        productText,
+        tasteKnowledge: knowledge.taste,
+      });
+      tasteScore = tasteResult.score;
+      tasteReasoning = tasteResult.reasoning;
+    } catch { /* ニュートラル値維持 */ }
   }
 
   // 6. トレンドスコア（TF-IDFコサイン類似度）

@@ -192,25 +192,8 @@ function extractTasteVector(text, axesKnowledge, brandLines) {
     }
   }
 
-  // ─── 不在シグナル: decoration軸 ───
-  // 装飾キーワード(high)が一つもなく、テキストがある程度の長さなら → ミニマル寄り
-  // スタイリストの知識: 「装飾的な記述がない商品はシンプル」
-  if (!matches.decoration && text.length >= 20) {
-    const decoAxis = axesKnowledge.decoration;
-    if (decoAxis) {
-      vector.decoration = 20; // 装飾なし = ミニマル寄り
-      matches.decoration = { low: ["(装飾記述なし→ミニマル推定)"], high: [] };
-    }
-  }
-
-  // ─── 不在シグナル: playfulness軸 ───
-  // ロゴ・グラフィック・ストリート系キーワードが皆無 → ソフィスティケート寄り
-  if (!matches.playfulness && text.length >= 20) {
-    vector.playfulness = 30;
-    matches.playfulness = { low: ["(遊び要素なし→洗練寄り推定)"], high: [] };
-  }
-
   // ブランドラインが検出された場合、そのベクトルで部分上書き（平均合成）
+  // 不在シグナルより先にブランドライン処理し、検出時は不在シグナルをスキップ
   if (lineResult) {
     for (const axis of AXES) {
       if (lineResult.vector[axis] !== undefined) {
@@ -219,6 +202,18 @@ function extractTasteVector(text, axesKnowledge, brandLines) {
           lineResult.vector[axis] * 0.6 + vector[axis] * 0.4
         );
       }
+    }
+  } else {
+    // ─── 不在シグナル（ブランドライン未検出時のみ適用）───
+    // 装飾キーワード(high)が一つもなく、テキストがある程度の長さなら → ミニマル寄り
+    if (!matches.decoration && text.length >= 20) {
+      vector.decoration = 20;
+      matches.decoration = { low: ["(装飾記述なし→ミニマル推定)"], high: [] };
+    }
+    // ロゴ・グラフィック・ストリート系キーワードが皆無 → ソフィスティケート寄り
+    if (!matches.playfulness && text.length >= 20) {
+      vector.playfulness = 30;
+      matches.playfulness = { low: ["(遊び要素なし→洗練寄り推定)"], high: [] };
     }
   }
 
