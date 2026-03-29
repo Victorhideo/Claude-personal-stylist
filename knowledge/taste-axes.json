@@ -1,0 +1,378 @@
+{
+  "version": "2.0.0",
+  "description": "ファッションテイストを5つの連続軸で定量化するための知識ベース。各軸は0(左極)〜100(右極)のスケールで、ユーザーの好みベクトルと商品テキストのマッチングに使用する。v2: 境界付きマッチ、不在シグナル、ブランドライン認識対応。",
+
+  "axes": {
+    "decoration": {
+      "label": "装飾性",
+      "low_label": "ミニマル",
+      "high_label": "デコラティブ",
+      "description": "装飾・ディテールの量。ミニマル(0)は余計な装飾を排除した純粋なデザイン、デコラティブ(100)は柄・装飾・レイヤードが豊か。装飾キーワードが皆無の場合はミニマル寄りと推定（不在シグナル）。",
+      "low_keywords": [
+        "ミニマル", "シンプル", "無地", "ベーシック", "クリーン",
+        "ソリッド", "プレーン", "ワンカラー", "ノーカラー", "無駄のない",
+        "minimal", "simple", "plain", "solid", "clean", "basic",
+        "unadorned", "understated", "sleek", "pared-back"
+      ],
+      "high_keywords": [
+        "装飾", "ディテール", "刺繍", "レース", "フリル",
+        "柄物", "総柄", "プリント", "パッチワーク", "ビジュー", "スタッズ",
+        "タッセル", "フリンジ", "マルチカラー", "ポケット多",
+        "embroidery", "lace", "ruffle", "print", "pattern",
+        "embellished", "ornate", "studded", "beaded", "patchwork"
+      ]
+    },
+
+    "formality": {
+      "label": "フォーマル度",
+      "low_label": "カジュアル",
+      "high_label": "ドレッシー",
+      "description": "カジュアル(0)は日常的でリラックスした装い、ドレッシー(100)はフォーマル・きちんと感のある装い",
+      "low_keywords": [
+        "カジュアル", "デイリー", "リラックス", "イージー",
+        "スウェット", "パーカー", "デニム", "スニーカー", "Tシャツ",
+        "ジャージ", "ショートパンツ", "サンダル", "カットソー",
+        "casual", "relaxed", "easy", "everyday", "sweatshirt",
+        "hoodie", "denim", "sneaker", "t-shirt", "jersey"
+      ],
+      "high_keywords": [
+        "フォーマル", "きれいめ", "上品", "エレガント",
+        "テーラード", "ジャケット", "スラックス",
+        {"word": "シャツ", "exclude_when": ["Tシャツ", "カットソー", "ワイシャツ"]},
+        "ブラウス", "ヒール", "ローファー", "革靴",
+        "セットアップ", "スーツ", "ネクタイ", "ドレスシューズ",
+        "formal", "elegant", "tailored", "jacket",
+        "slacks", "blouse", "loafer", "oxford"
+      ]
+    },
+
+    "avantgarde": {
+      "label": "モード感",
+      "low_label": "クラシック",
+      "high_label": "モード",
+      "description": "クラシック(0)は時代を超えた定番・トラッド、モード(100)は実験的・前衛的・デザイナーズ",
+      "low_keywords": [
+        "クラシック", "トラッド", "定番", "王道",
+        "伝統的", "コンサバ", "正統派", "オーセンティック",
+        "チノ", "ポロシャツ", "ブレザー",
+        "classic", "traditional", "timeless", "authentic",
+        "conservative", "preppy", "heritage", "ivy"
+      ],
+      "high_keywords": [
+        "モード", "アバンギャルド", "前衛", "実験的", "デザイナーズ",
+        "アシンメトリー", "ドレープ", "構築的", "脱構築",
+        "レイヤード", "アーキテクチャル",
+        "ジェンダーレス", "アート", "立体的",
+        "mode", "avant-garde", "experimental", "deconstructed",
+        "architectural", "asymmetric", "drape", "conceptual"
+      ]
+    },
+
+    "structure": {
+      "label": "構築感",
+      "low_label": "リラックス",
+      "high_label": "ストラクチャード",
+      "description": "リラックス(0)はゆるく身体に沿わないシルエット、ストラクチャード(100)は仕立て・構築で身体のラインを作るシルエット",
+      "low_keywords": [
+        "リラックス", "ルーズ", "ゆったり", "ドロップショルダー",
+        "オーバーサイズ", "ワイド", "ビッグシルエット", "だぼっと",
+        "フリーサイズ", "ストレッチ", "ニット", "スウェット",
+        "リラックスフィット",
+        "relaxed", "loose", "oversized", "wide", "baggy",
+        "drop-shoulder", "boxy", "unstructured", "soft"
+      ],
+      "high_keywords": [
+        "タイト", "スリム", "テーラード", "ジャストサイズ",
+        "タック", "ダーツ", "肩パッド", "仕立て", "構築",
+        {"word": "フィット", "exclude_when": ["リラックスフィット", "コンフォートフィット"]},
+        "ペンシル", "テーパード",
+        "structured", "tailored", "fitted", "slim", "tapered",
+        "darted", "sculpted", "sharp", "precise"
+      ]
+    },
+
+    "playfulness": {
+      "label": "遊び心",
+      "low_label": "ソフィスティケート",
+      "high_label": "プレイフル",
+      "description": "ソフィスティケート(0)は洗練・大人・知的、プレイフル(100)はポップ・ストリート・遊び心のあるスタイル。遊び系キーワードが皆無の場合はソフィスティケート寄りと推定。",
+      "low_keywords": [
+        "洗練", "知的", "大人", "上質", "ラグジュアリー",
+        "シック", "ノーブル", "マチュア", "落ち着いた",
+        "モノトーン", "ダークトーン", "ニュートラル",
+        "sophisticated", "refined", "luxurious", "chic",
+        "mature", "noble", "intellectual", "muted", "tonal"
+      ],
+      "high_keywords": [
+        "ストリート", "ポップ", "スポーティ", "カラフル",
+        "グラフィック", "ロゴ", "スケーター", "ヒップホップ",
+        "ネオン", "蛍光", "ビビッド", "ワッペン", "アウトドア",
+        "フロントプリント", "バックプリント",
+        "street", "pop", "sporty", "colorful", "graphic",
+        "logo", "skater", "hip-hop", "vivid", "bold"
+      ]
+    }
+  },
+
+  "brand_lines": [
+    {
+      "label": "UNIQLO U",
+      "description": "Christophe Lemaire監修のデザイナーズライン。通常UNIQLOよりモード寄り・構築的",
+      "match_patterns": ["ユニクロu", "uniqlo u", "ユニクロ u"],
+      "vector": { "decoration": 10, "formality": 55, "avantgarde": 55, "structure": 55, "playfulness": 10 }
+    },
+    {
+      "label": "UNIQLO x JW Anderson",
+      "description": "JWアンダーソンとのコラボ。デコラティブ・実験的で通常UNIQLOとは別物",
+      "match_patterns": ["jwアンダーソン", "jw anderson", "jw アンダーソン"],
+      "vector": { "decoration": 45, "formality": 50, "avantgarde": 70, "structure": 45, "playfulness": 45 }
+    },
+    {
+      "label": "UNIQLO +J",
+      "description": "Jil Sander共同制作ライン。ミニマルかつ上質な素材使い",
+      "match_patterns": ["+j", "プラスj", "uniqlo +j", "ユニクロ +j"],
+      "vector": { "decoration": 5, "formality": 65, "avantgarde": 60, "structure": 60, "playfulness": 5 }
+    },
+    {
+      "label": "ZARA SRPLS / Studio",
+      "description": "ZARAのハイエンドライン。ミニマルモード寄り",
+      "match_patterns": ["zara srpls", "zara studio", "ザラ スタジオ"],
+      "vector": { "decoration": 15, "formality": 60, "avantgarde": 60, "structure": 60, "playfulness": 10 }
+    },
+    {
+      "label": "ZARA TRF",
+      "description": "ZARAの若年トレンドライン。ストリート・ポップ寄り",
+      "match_patterns": ["zara trf", "trf"],
+      "vector": { "decoration": 40, "formality": 20, "avantgarde": 40, "structure": 30, "playfulness": 70 }
+    },
+    {
+      "label": "THE NORTH FACE PURPLE LABEL",
+      "description": "nanamica監修の日本限定ライン。アウトドアの機能性とモード感の融合",
+      "match_patterns": ["パープルレーベル", "purple label"],
+      "vector": { "decoration": 15, "formality": 40, "avantgarde": 50, "structure": 45, "playfulness": 30 }
+    },
+    {
+      "label": "BEAMS PLUS",
+      "description": "BEAMSのアメトラ・ヘリテージライン。クラシック寄り",
+      "match_patterns": ["beams plus", "ビームスプラス"],
+      "vector": { "decoration": 20, "formality": 55, "avantgarde": 10, "structure": 55, "playfulness": 20 }
+    },
+    {
+      "label": "BEAMS T",
+      "description": "BEAMSのストリート・グラフィックライン",
+      "match_patterns": ["beams t"],
+      "vector": { "decoration": 35, "formality": 15, "avantgarde": 30, "structure": 25, "playfulness": 70 }
+    }
+  ],
+
+  "brand_vectors": {
+    "description": "代表的なブランドのテイストベクトル。ユーザーが好きなブランドを挙げたときにプロフィールのベクトル推定に使用",
+    "brands": {
+      "Jil Sander": { "decoration": 5, "formality": 65, "avantgarde": 70, "structure": 60, "playfulness": 10 },
+      "UNIQLO": { "decoration": 10, "formality": 40, "avantgarde": 15, "structure": 45, "playfulness": 25 },
+      "ZARA": { "decoration": 35, "formality": 50, "avantgarde": 45, "structure": 50, "playfulness": 35 },
+      "MUJI / 無印良品": { "decoration": 5, "formality": 30, "avantgarde": 10, "structure": 35, "playfulness": 15 },
+      "COMME des GARÇONS": { "decoration": 40, "formality": 50, "avantgarde": 95, "structure": 55, "playfulness": 45 },
+      "Maison Margiela": { "decoration": 25, "formality": 55, "avantgarde": 85, "structure": 50, "playfulness": 30 },
+      "CELINE": { "decoration": 15, "formality": 70, "avantgarde": 60, "structure": 70, "playfulness": 10 },
+      "The Row": { "decoration": 5, "formality": 65, "avantgarde": 55, "structure": 65, "playfulness": 5 },
+      "LEMAIRE": { "decoration": 10, "formality": 55, "avantgarde": 55, "structure": 50, "playfulness": 15 },
+      "Acne Studios": { "decoration": 20, "formality": 45, "avantgarde": 65, "structure": 45, "playfulness": 30 },
+      "sacai": { "decoration": 50, "formality": 50, "avantgarde": 80, "structure": 55, "playfulness": 40 },
+      "ISSEY MIYAKE": { "decoration": 35, "formality": 50, "avantgarde": 90, "structure": 40, "playfulness": 35 },
+      "Yohji Yamamoto": { "decoration": 20, "formality": 55, "avantgarde": 90, "structure": 35, "playfulness": 15 },
+      "AURALEE": { "decoration": 5, "formality": 50, "avantgarde": 45, "structure": 45, "playfulness": 10 },
+      "COMOLI": { "decoration": 5, "formality": 50, "avantgarde": 40, "structure": 40, "playfulness": 10 },
+      "STUDIO NICHOLSON": { "decoration": 5, "formality": 55, "avantgarde": 55, "structure": 55, "playfulness": 10 },
+      "NEEDLES": { "decoration": 45, "formality": 25, "avantgarde": 55, "structure": 30, "playfulness": 60 },
+      "Stüssy": { "decoration": 35, "formality": 15, "avantgarde": 30, "structure": 25, "playfulness": 75 },
+      "Supreme": { "decoration": 40, "formality": 10, "avantgarde": 35, "structure": 20, "playfulness": 85 },
+      "Nike": { "decoration": 25, "formality": 10, "avantgarde": 20, "structure": 30, "playfulness": 70 },
+      "Ralph Lauren": { "decoration": 25, "formality": 60, "avantgarde": 5, "structure": 60, "playfulness": 20 },
+      "Brooks Brothers": { "decoration": 20, "formality": 70, "avantgarde": 5, "structure": 65, "playfulness": 10 },
+      "Barbour": { "decoration": 15, "formality": 40, "avantgarde": 5, "structure": 50, "playfulness": 25 },
+      "A.P.C.": { "decoration": 10, "formality": 45, "avantgarde": 35, "structure": 50, "playfulness": 20 },
+      "MARGARET HOWELL": { "decoration": 10, "formality": 50, "avantgarde": 30, "structure": 50, "playfulness": 15 },
+      "YAECA": { "decoration": 5, "formality": 40, "avantgarde": 25, "structure": 40, "playfulness": 15 },
+      "1LDK": { "decoration": 10, "formality": 40, "avantgarde": 35, "structure": 40, "playfulness": 20 },
+      "JW Anderson": { "decoration": 45, "formality": 50, "avantgarde": 75, "structure": 50, "playfulness": 50 },
+      "Maison Kitsuné": { "decoration": 20, "formality": 40, "avantgarde": 35, "structure": 45, "playfulness": 40 },
+      "Ami Paris": { "decoration": 20, "formality": 50, "avantgarde": 40, "structure": 50, "playfulness": 30 },
+      "OUR LEGACY": { "decoration": 20, "formality": 40, "avantgarde": 50, "structure": 40, "playfulness": 35 },
+      "KENZO": { "decoration": 50, "formality": 40, "avantgarde": 60, "structure": 45, "playfulness": 55 },
+      "BEAMS": { "decoration": 25, "formality": 40, "avantgarde": 30, "structure": 45, "playfulness": 35 },
+      "UNITED ARROWS": { "decoration": 20, "formality": 55, "avantgarde": 25, "structure": 55, "playfulness": 20 },
+      "SHIPS": { "decoration": 20, "formality": 50, "avantgarde": 20, "structure": 50, "playfulness": 25 },
+      "nanamica": { "decoration": 10, "formality": 35, "avantgarde": 35, "structure": 40, "playfulness": 30 },
+      "THE NORTH FACE": { "decoration": 20, "formality": 15, "avantgarde": 15, "structure": 40, "playfulness": 50 },
+      "Patagonia": { "decoration": 15, "formality": 10, "avantgarde": 10, "structure": 35, "playfulness": 40 },
+      "Arc'teryx": { "decoration": 15, "formality": 15, "avantgarde": 25, "structure": 45, "playfulness": 40 },
+      "Hender Scheme": { "decoration": 15, "formality": 45, "avantgarde": 55, "structure": 50, "playfulness": 20 },
+      "ATTACHMENT": { "decoration": 10, "formality": 50, "avantgarde": 50, "structure": 60, "playfulness": 15 },
+      "UNDERCOVER": { "decoration": 45, "formality": 40, "avantgarde": 85, "structure": 45, "playfulness": 50 },
+      "visvim": { "decoration": 30, "formality": 35, "avantgarde": 45, "structure": 35, "playfulness": 30 },
+      "DESCENDANT": { "decoration": 20, "formality": 25, "avantgarde": 30, "structure": 35, "playfulness": 50 },
+      "WTAPS": { "decoration": 25, "formality": 25, "avantgarde": 40, "structure": 40, "playfulness": 50 }
+    }
+  },
+
+  "diagnosis_questions": {
+    "description": "テイスト診断用の質問。各質問は5軸のうち1-2軸に影響するスコアを持つ",
+    "questions": [
+      {
+        "id": 1,
+        "text": "服を選ぶとき、一番気にするのは？",
+        "options": [
+          { "text": "シルエットの美しさ・ラインの綺麗さ", "scores": { "decoration": -15, "structure": 15, "avantgarde": 10 } },
+          { "text": "着心地のよさ・楽さ", "scores": { "formality": -15, "structure": -15, "playfulness": 5 } },
+          { "text": "人と被らないデザイン性", "scores": { "avantgarde": 20, "decoration": 10 } },
+          { "text": "清潔感・きちんと見えること", "scores": { "formality": 15, "structure": 10, "playfulness": -10 } }
+        ]
+      },
+      {
+        "id": 2,
+        "text": "好きな色の組み合わせは？",
+        "options": [
+          { "text": "黒・白・グレーのモノトーン", "scores": { "decoration": -10, "playfulness": -15, "avantgarde": 5 } },
+          { "text": "ネイビー・ベージュ・ブラウンの落ち着いたトーン", "scores": { "avantgarde": -10, "playfulness": -10, "formality": 5 } },
+          { "text": "季節感のある差し色を入れるのが好き", "scores": { "playfulness": 10, "decoration": 10 } },
+          { "text": "ビビッドな色やコントラスト強めが好き", "scores": { "playfulness": 20, "decoration": 15, "avantgarde": 5 } }
+        ]
+      },
+      {
+        "id": 3,
+        "text": "理想の休日コーデは？",
+        "options": [
+          { "text": "上質なニット＋スラックスでカフェへ", "scores": { "formality": 10, "playfulness": -15, "structure": 10 } },
+          { "text": "オーバーサイズT＋ワイドパンツでゆるく", "scores": { "structure": -15, "formality": -10, "playfulness": 5 } },
+          { "text": "ジャケットを羽織ってちょっときれいめに", "scores": { "formality": 15, "structure": 15, "avantgarde": -5 } },
+          { "text": "柄シャツやアクセを効かせて個性を出す", "scores": { "decoration": 20, "avantgarde": 10, "playfulness": 10 } }
+        ]
+      },
+      {
+        "id": 4,
+        "text": "ショップで最初に目が行くのは？",
+        "options": [
+          { "text": "素材感やディテールの作り込み", "scores": { "avantgarde": 10, "structure": 10, "decoration": 5 } },
+          { "text": "定番アイテムの新色・新素材", "scores": { "avantgarde": -10, "decoration": -5, "formality": 5 } },
+          { "text": "見たことないシルエットやデザイン", "scores": { "avantgarde": 20, "decoration": 10, "playfulness": 5 } },
+          { "text": "コスパの良い使い回しやすいもの", "scores": { "formality": -5, "decoration": -10, "avantgarde": -10 } }
+        ]
+      },
+      {
+        "id": 5,
+        "text": "「おしゃれだな」と思う人のイメージは？",
+        "options": [
+          { "text": "余計なものを削ぎ落としたミニマルな人", "scores": { "decoration": -20, "playfulness": -10, "structure": 5 } },
+          { "text": "さりげなくトレンドを取り入れてる人", "scores": { "avantgarde": 10, "playfulness": 5 } },
+          { "text": "自分のスタイルを貫いてる個性的な人", "scores": { "avantgarde": 15, "decoration": 5, "playfulness": 5 } },
+          { "text": "清潔感があってTPOに合った着こなしの人", "scores": { "formality": 15, "playfulness": -10, "avantgarde": -10 } }
+        ]
+      },
+      {
+        "id": 6,
+        "text": "アウターを買うなら？",
+        "options": [
+          { "text": "ステンカラーコートやチェスターコート", "scores": { "formality": 15, "avantgarde": -5, "structure": 15 } },
+          { "text": "MA-1やミリタリージャケット", "scores": { "playfulness": 15, "formality": -10, "structure": 5 } },
+          { "text": "ノーカラーのミニマルなコート", "scores": { "decoration": -15, "avantgarde": 10, "structure": 10 } },
+          { "text": "デザイン性のあるモード系アウター", "scores": { "avantgarde": 20, "decoration": 10, "structure": 5 } }
+        ]
+      },
+      {
+        "id": 7,
+        "text": "柄物について",
+        "options": [
+          { "text": "基本着ない。無地が安心", "scores": { "decoration": -20, "playfulness": -10 } },
+          { "text": "ストライプやチェックなど定番柄はOK", "scores": { "decoration": 5, "avantgarde": -5, "playfulness": 5 } },
+          { "text": "花柄やグラフィック柄も好き", "scores": { "decoration": 15, "playfulness": 15, "avantgarde": 5 } },
+          { "text": "総柄やアート的なプリントが好き", "scores": { "decoration": 20, "avantgarde": 15, "playfulness": 15 } }
+        ]
+      },
+      {
+        "id": 8,
+        "text": "靴はどんなのが多い？",
+        "options": [
+          { "text": "白スニーカーや黒スニーカー", "scores": { "formality": -5, "playfulness": 5, "decoration": -5 } },
+          { "text": "ローファーや革靴", "scores": { "formality": 15, "playfulness": -10, "structure": 10 } },
+          { "text": "ハイテクスニーカーやダッドシューズ", "scores": { "playfulness": 15, "avantgarde": 10, "formality": -10 } },
+          { "text": "ブーツ（サイドゴア、チャッカなど）", "scores": { "structure": 10, "avantgarde": 5, "formality": 5 } }
+        ]
+      },
+      {
+        "id": 9,
+        "text": "自分のクローゼットを一言で表すと？",
+        "options": [
+          { "text": "同じような色・形が並んでる（統一感重視）", "scores": { "decoration": -15, "playfulness": -10, "avantgarde": -5 } },
+          { "text": "きれいめとカジュアルが半々", "scores": { "formality": 5, "playfulness": 5 } },
+          { "text": "わりとバラバラ。気分で買う", "scores": { "playfulness": 10, "avantgarde": 5, "decoration": 5 } },
+          { "text": "こだわりの一軍だけ厳選", "scores": { "avantgarde": 10, "structure": 5, "playfulness": -5 } }
+        ]
+      },
+      {
+        "id": 10,
+        "text": "ファッションに求めるものは？",
+        "options": [
+          { "text": "自信を持てること・きちんと見えること", "scores": { "formality": 15, "structure": 10, "playfulness": -10 } },
+          { "text": "自分らしさの表現", "scores": { "avantgarde": 15, "decoration": 5, "playfulness": 5 } },
+          { "text": "気分が上がること・楽しさ", "scores": { "playfulness": 15, "decoration": 10 } },
+          { "text": "日常に溶け込む心地よさ", "scores": { "formality": -10, "structure": -10, "decoration": -10 } }
+        ]
+      }
+    ]
+  },
+
+  "style_labels": {
+    "description": "5軸ベクトルのクラスタリング結果を自然言語ラベルにマッピングする。diagnosis結果の説明に使用",
+    "archetypes": [
+      {
+        "label": "ミニマルモード",
+        "description": "余計な装飾を排除しつつ、デザインの鋭さで勝負するスタイル。Jil Sander、CELINE、The Row的な世界観",
+        "vector": { "decoration": 10, "formality": 60, "avantgarde": 65, "structure": 60, "playfulness": 10 },
+        "representative_brands": ["Jil Sander", "CELINE", "The Row", "STUDIO NICHOLSON"]
+      },
+      {
+        "label": "リラックスモード",
+        "description": "ゆるいシルエットの中にモード感を潜ませるスタイル。COMOLI、AURALEE、LEMAIRE的な空気感",
+        "vector": { "decoration": 10, "formality": 45, "avantgarde": 45, "structure": 35, "playfulness": 15 },
+        "representative_brands": ["COMOLI", "AURALEE", "LEMAIRE", "YAECA"]
+      },
+      {
+        "label": "クリーンカジュアル",
+        "description": "ベーシックを清潔感で着こなすスタイル。UNIQLOやA.P.C.を軸にシンプルだけど手を抜かない",
+        "vector": { "decoration": 10, "formality": 40, "avantgarde": 20, "structure": 45, "playfulness": 20 },
+        "representative_brands": ["UNIQLO", "A.P.C.", "MUJI / 無印良品", "MARGARET HOWELL"]
+      },
+      {
+        "label": "トラッドクラシック",
+        "description": "時代に左右されないトラディショナルな正統派スタイル。ブレザー、チノ、ローファーの王道",
+        "vector": { "decoration": 20, "formality": 70, "avantgarde": 5, "structure": 65, "playfulness": 10 },
+        "representative_brands": ["Ralph Lauren", "Brooks Brothers", "Barbour", "UNITED ARROWS"]
+      },
+      {
+        "label": "ストリートカジュアル",
+        "description": "スニーカーやグラフィックを軸にした遊び心のあるスタイル。ロゴ・カラー・レイヤードで個性を出す",
+        "vector": { "decoration": 35, "formality": 15, "avantgarde": 35, "structure": 25, "playfulness": 75 },
+        "representative_brands": ["Stüssy", "Supreme", "Nike", "NEEDLES"]
+      },
+      {
+        "label": "アバンギャルド",
+        "description": "既成概念を壊す実験的・前衛的なスタイル。COMME des GARÇONS、Yohji的な脱構築",
+        "vector": { "decoration": 35, "formality": 50, "avantgarde": 90, "structure": 45, "playfulness": 30 },
+        "representative_brands": ["COMME des GARÇONS", "Yohji Yamamoto", "UNDERCOVER", "sacai"]
+      },
+      {
+        "label": "スポーツMIX",
+        "description": "アウトドアやスポーツのアイテムをタウンユースに取り入れるスタイル。機能美と快適さの両立",
+        "vector": { "decoration": 15, "formality": 15, "avantgarde": 20, "structure": 35, "playfulness": 55 },
+        "representative_brands": ["THE NORTH FACE", "Arc'teryx", "nanamica", "Patagonia"]
+      },
+      {
+        "label": "エクレクティックMIX",
+        "description": "異なるテイストを自由に混ぜるスタイル。モードとストリート、トラッドとカジュアルの境界を行き来する",
+        "vector": { "decoration": 35, "formality": 40, "avantgarde": 55, "structure": 40, "playfulness": 45 },
+        "representative_brands": ["JW Anderson", "KENZO", "OUR LEGACY", "Maison Kitsuné"]
+      }
+    ]
+  }
+}

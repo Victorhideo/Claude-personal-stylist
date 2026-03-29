@@ -22,6 +22,7 @@ import * as path from "path";
 import { fileURLToPath } from "url";
 import "dotenv/config";
 import { scoreAndRankProducts } from "./models/style-scorer.js";
+import { evaluateDiagnosis, estimateVectorFromBrands, findTopArchetypes } from "./models/taste-engine.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROFILE_PATH = path.join(__dirname, "..", "profile.json");
@@ -45,19 +46,57 @@ function loadAllKnowledge() {
     face: "face-types.json",
     body: "body-proportions.json",
     coordination: "coordination-rules.json",
+    taste: "taste-axes.json",
   };
   const knowledge = {};
   for (const [key, filename] of Object.entries(files)) {
-    knowledge[key] = JSON.parse(
-      fs.readFileSync(path.join(KNOWLEDGE_DIR, filename), "utf-8")
-    );
+    try {
+      knowledge[key] = JSON.parse(
+        fs.readFileSync(path.join(KNOWLEDGE_DIR, filename), "utf-8")
+      );
+    } catch (err) {
+      knowledge[key] = null;
+    }
   }
   return knowledge;
 }
 
+// ─── 画像取得ヘルパー ─────────────────────────────────
+/**
+ * URLから画像を取得してbase64エンコードする
+ * Playwrightのページコンテキストを使い、同一セッションのCookieを維持
+ *
+ * @param {import('playwright').Page} page - Playwrightページ
+ * @param {string} imageUrl - 画像URL
+ * @param {number} [maxSizeKB=500] - 最大サイズ（KB）。超過時はスキップ
+ * @returns {Promise<{ data: string, mimeType: string } | null>}
+ */
+async function fetchImageAsBase64(page, imageUrl, maxSizeKB = 500) {
+  try {
+    const response = await page.context().request.get(imageUrl, { timeout: 10000 });
+    if (!response.ok()) return null;
+
+    const buffer = await response.body();
+    if (buffer.length > maxSizeKB * 1024) return null;
+
+    const contentType = response.headers()["content-type"] || "image/jpeg";
+    const mimeType = contentType.split(";")[0].trim();
+
+    // 画像MIMEタイプのみ
+    if (!mimeType.startsWith("image/")) return null;
+
+    return {
+      data: buffer.toString("base64"),
+      mimeType,
+    };
+  } catch {
+    return null;
+  }
+}
+
 // ─── 汎用スクレイパー ─────────────────────────────────
 async function scrapeProducts(url, options = {}) {
-  const { maxItems = 20, category = "", scrollCount = 3 } = options;
+  const { maxItems = 20, category = "", scrollCount = 3, inlineImageCount = 5 } = options;
 
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({
@@ -142,6 +181,17 @@ async function scrapeProducts(url, options = {}) {
         document.querySelector('meta[property="og:title"]')?.content || "",
     }));
 
+    // 先頭N件の商品画像をbase64で取得（Claudeが視覚的に判断できるよう）
+    const inlineImages = [];
+    for (let i = 0; i < Math.min(inlineImageCount, pageData.candidates.length); i++) {
+      const imgUrl = pageData.candidates[i].image;
+      if (!imgUrl) continue;
+      const img = await fetchImageAsBase64(page, imgUrl, 300);
+      if (img) {
+        inlineImages.push({ index: i, productText: pageData.candidates[i].text.slice(0, 80), ...img });
+      }
+    }
+
     await browser.close();
 
     return {
@@ -153,17 +203,14 @@ async function scrapeProducts(url, options = {}) {
       },
       rawProducts: pageData.candidates,
       count: pageData.candidates.length,
+      inlineImages,
       instruction: `
 以下は ${pageData.url} から取得した商品候補の生データです。
 各候補の text フィールドには商品名・価格・説明が混在しています。
-これをもとに、以下の形式に整理してください：
 
-- 商品名
-- 価格（数値）
-- カラー展開
-- サイズ展開
-- 商品URL
-- 画像URL
+【重要】先頭${inlineImages.length}件の商品画像が添付されています。
+スタイリストとして各画像を観察し、テキスト情報と合わせて総合的に判断してください。
+画像から読み取れるシルエット・素材感・色味・ディテールは、テキストだけでは得られない重要な判断材料です。
 
 ユーザーのプロフィール（骨格タイプ、パーソナルカラー、テイスト等）と
 照らし合わせて、似合うアイテムを選んでください。
@@ -244,25 +291,36 @@ async function scrapeProductDetail(url) {
       };
     });
 
+    // 商品画像をbase64で取得（最大3枚）
+    const imageResults = [];
+    const targetImages = (data.images ?? []).slice(0, 3);
+    for (const imgUrl of targetImages) {
+      const img = await fetchImageAsBase64(page, imgUrl);
+      if (img) {
+        imageResults.push(img);
+      }
+    }
+
     await browser.close();
 
     return {
       success: true,
       ...data,
+      imageCount: imageResults.length,
+      images_base64: imageResults,
       instruction: `
 以下は商品詳細ページの情報です。
 structured フィールドにJSON-LDから抽出した構造化データがあります（ある場合）。
 bodyText にはページ本文のテキストが含まれています。
 
-これをもとに以下を特定してください：
-- 商品名、ブランド名
-- 価格
-- 素材・生地
-- サイズ展開と各サイズの寸法（cm）
-- カラー展開
-- 商品の特徴（シルエット、着丈、フィット感）
+【重要】画像が添付されています。スタイリストとして画像を注意深く観察し、以下を判断してください：
+- 実際のシルエット（身幅、着丈のバランス、肩の落ち方）
+- 生地の質感・落ち感（光沢、マット、透け感、厚み）
+- 色のトーン（テキストでは「ブラック」でも実際は墨黒、漆黒、チャコールなど異なる）
+- ディテール（縫製、ボタン、ステッチ、裏地の見え方）
+- 全体の雰囲気（ミニマル/デコラティブ、モード/クラシック、リラックス/構築的）
 
-ユーザーの体型情報と照合して、推奨サイズとカラーを提案してください。
+テキスト情報と画像の両方を総合して、ユーザーの体型情報と照合のうえ推奨サイズ・カラーを提案してください。
 `,
     };
   } catch (err) {
@@ -336,7 +394,7 @@ X APIの設定方法（オプション）:
     }));
 
     // エンゲージメント順にソート
-    tweets.sort((a, b) => b.likes + b.retweets - (a.likes + a.retweets));
+    tweets.sort((a, b) => (b.likes + b.retweets) - (a.likes + a.retweets));
 
     return {
       success: true,
@@ -855,7 +913,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     {
       name: "scrape_products",
       description:
-        "任意のファッションECサイトのURLから商品一覧を取得します。UNIQLO、ZARA、SSENSE、ZOZOTOWN等どんなサイトでも対応。カテゴリページのURLを渡してください。",
+        "任意のファッションECサイトのURLから商品一覧を取得します。UNIQLO、ZARA、SSENSE、ZOZOTOWN等どんなサイトでも対応。カテゴリページのURLを渡してください。先頭数件の商品画像もインラインで返すため、視覚的に判断できます。",
       inputSchema: {
         type: "object",
         properties: {
@@ -870,6 +928,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           category: {
             type: "string",
             description: "カテゴリ名（例: tops, bottoms, outerwear）",
+          },
+          inline_images: {
+            type: "number",
+            description: "インラインで画像を返す商品数（デフォルト: 5、0で画像なし）",
           },
         },
         required: ["url"],
@@ -983,7 +1045,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
               properties: {
                 key: {
                   type: "string",
-                  description: "ドット記法のキーパス（例: 'body.skeleton_type', 'color.season'）",
+                  description: "ドット記法のキーパス（例: 'body.skeleton_type', 'body.personal_color', 'taste.vector'）",
                 },
                 value: {
                   description: "設定する値（文字列・数値・配列・オブジェクト何でも可）",
@@ -1034,7 +1096,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         properties: {
           category: {
             type: "string",
-            enum: ["skeleton", "color", "face", "body", "coordination", "all"],
+            enum: ["skeleton", "color", "face", "body", "coordination", "taste", "all"],
             description: "取得するルールカテゴリ",
           },
           type: {
@@ -1043,6 +1105,35 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           },
         },
         required: ["category"],
+      },
+    },
+    {
+      name: "diagnose_taste",
+      description:
+        "テイスト診断ツール。ファッションの好みを5軸（装飾性・フォーマル度・モード感・構築感・遊び心）で数値化します。mode='get_questions'で10問の質問リストを返し、mode='evaluate'で回答からテイストベクトルを算出。mode='from_brands'で好きなブランドからベクトルを推定。",
+      inputSchema: {
+        type: "object",
+        properties: {
+          mode: {
+            type: "string",
+            enum: ["get_questions", "evaluate", "from_brands"],
+            description:
+              "get_questions: 質問リストを取得 / evaluate: 回答を評価してベクトル算出 / from_brands: 好きなブランドからベクトル推定",
+          },
+          answers: {
+            type: "array",
+            items: { type: "number" },
+            description:
+              "mode='evaluate' のとき必須。各質問への回答選択肢インデックス（0始まり）の配列。長さは1〜10。",
+          },
+          brands: {
+            type: "array",
+            items: { type: "string" },
+            description:
+              "mode='from_brands' のとき必須。好きなブランド名の配列（例: ['Jil Sander', 'UNIQLO', 'COMOLI']）",
+          },
+        },
+        required: ["mode"],
       },
     },
     {
@@ -1097,6 +1188,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const missing = [];
       if (!profile.body?.skeleton_type) missing.push("skeleton_type（骨格タイプ）→ diagnose_skeletonを実行");
       if (!profile.body?.personal_color) missing.push("personal_color（パーソナルカラー）→ diagnose_colorを実行");
+      if (!profile.taste?.vector) missing.push("taste.vector（テイスト）→ diagnose_tasteを実行");
       if (!profile.body?.height_cm) missing.push("height_cm（身長）");
       if (!profile.gender) missing.push("gender（性別）");
 
@@ -1125,17 +1217,60 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const result = await scrapeProducts(args.url, {
         maxItems: args.max_items || 20,
         category: args.category || "",
+        inlineImageCount: args.inline_images ?? 5,
       });
-      return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-      };
+
+      // 画像をMCP ImageContentブロックとして返す
+      const contentBlocks = [];
+      const inlineImages = result.inlineImages ?? [];
+      for (const img of inlineImages) {
+        contentBlocks.push({
+          type: "image",
+          data: img.data,
+          mimeType: img.mimeType,
+        });
+        contentBlocks.push({
+          type: "text",
+          text: `↑ 商品${img.index + 1}: ${img.productText}`,
+        });
+      }
+
+      // テキスト情報（画像データ以外）
+      const textResult = { ...result };
+      delete textResult.inlineImages;
+      contentBlocks.push({
+        type: "text",
+        text: JSON.stringify(textResult, null, 2),
+      });
+
+      return { content: contentBlocks };
     }
 
     case "scrape_product_detail": {
       const result = await scrapeProductDetail(args.url);
-      return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-      };
+
+      // レスポンスにMCPのImageContentブロックを含めてClaudeが画像を直接見れるようにする
+      const contentBlocks = [];
+
+      // 画像をImageContentとして追加（Claudeのマルチモーダル能力で分析）
+      const inlineImages = result.images_base64 ?? [];
+      for (const img of inlineImages) {
+        contentBlocks.push({
+          type: "image",
+          data: img.data,
+          mimeType: img.mimeType,
+        });
+      }
+
+      // テキスト情報（画像以外）
+      const textResult = { ...result };
+      delete textResult.images_base64;
+      contentBlocks.push({
+        type: "text",
+        text: JSON.stringify(textResult, null, 2),
+      });
+
+      return { content: contentBlocks };
     }
 
     case "search_x": {
@@ -1404,24 +1539,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      // プロフィール完全性チェック
+      // プロフィール完全性チェック（不足分はニュートラル値50で代替してスコアリング続行）
       const scoreMissing = [];
       if (!scoreProfile.body?.skeleton_type) scoreMissing.push("skeleton_type（骨格タイプ）");
       if (!scoreProfile.body?.personal_color) scoreMissing.push("personal_color（パーソナルカラー）");
-
-      if (scoreMissing.length > 0) {
-        return {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify({
-                warning: `プロフィールが不完全です。不足: ${scoreMissing.join(", ")}。スコアリングはニュートラル値(50)で代替します。`,
-                missing: scoreMissing,
-              }),
-            },
-          ],
-        };
-      }
+      if (!scoreProfile.taste?.vector) scoreMissing.push("taste.vector（テイスト）");
 
       try {
         // ナレッジ読み込み
@@ -1443,6 +1565,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               text: JSON.stringify(
                 {
                   success: true,
+                  ...(scoreMissing.length > 0 ? { warning: `プロフィール不完全（${scoreMissing.join(", ")}）。該当軸はニュートラル値(50)で代替。` } : {}),
                   count: ranked.length,
                   ranked: ranked.map(({ product, score }) => ({
                     totalScore: score.totalScore,
@@ -1479,6 +1602,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         face: "face-types.json",
         body: "body-proportions.json",
         coordination: "coordination-rules.json",
+        taste: "taste-axes.json",
       };
 
       try {
@@ -1544,6 +1668,158 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           ],
         };
       }
+    }
+
+    case "diagnose_taste": {
+      const knowledge = loadAllKnowledge();
+      const tasteKnowledge = knowledge.taste;
+
+      if (args.mode === "get_questions") {
+        const questions = tasteKnowledge.diagnosis_questions.questions.map((q) => {
+          // 選択肢をシャッフルして順序バイアスを防止（diagnose_skeleton/colorと同じパターン）
+          const indices = q.options.map((_, idx) => idx);
+          for (let i = indices.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [indices[i], indices[j]] = [indices[j], indices[i]];
+          }
+          return {
+            id: q.id,
+            text: q.text,
+            options: indices.map((origIdx) => ({
+              index: origIdx,
+              text: q.options[origIdx].text,
+            })),
+          };
+        });
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                {
+                  mode: "get_questions",
+                  count: questions.length,
+                  questions,
+                  instruction:
+                    "10問の質問を1問ずつ会話形式で聞いてください。全問回答後、mode='evaluate'で回答配列を送信してベクトルを算出してください。途中回答でも評価可能です。",
+                },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      }
+
+      if (args.mode === "evaluate") {
+        if (!Array.isArray(args.answers) || args.answers.length === 0) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify({ error: "answers 配列が必要です" }),
+              },
+            ],
+          };
+        }
+        const questions = tasteKnowledge.diagnosis_questions.questions;
+        const { vector, answered } = evaluateDiagnosis(args.answers, questions);
+        const topArchetypes = findTopArchetypes(
+          vector,
+          tasteKnowledge.style_labels.archetypes,
+          3
+        );
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                {
+                  mode: "evaluate",
+                  vector,
+                  answered,
+                  primary_style: topArchetypes[0] ?? null,
+                  secondary_styles: topArchetypes.slice(1),
+                  instruction:
+                    "結果をユーザーに説明し、共感したらsave_profileでtaste.vectorに保存してください。ブランド情報もあればfrom_brandsで補正することを推奨します。",
+                },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      }
+
+      if (args.mode === "from_brands") {
+        if (!Array.isArray(args.brands) || args.brands.length === 0) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify({ error: "brands 配列が必要です" }),
+              },
+            ],
+          };
+        }
+        const brandVectors = tasteKnowledge.brand_vectors.brands;
+        const { vector, matchedBrands, unmatchedBrands } =
+          estimateVectorFromBrands(args.brands, brandVectors);
+        const topArchetypes = findTopArchetypes(
+          vector,
+          tasteKnowledge.style_labels.archetypes,
+          3
+        );
+
+        // 既存の診断ベクトルがある場合は平均を提案
+        const profile = loadProfile();
+        const existingVector = profile?.taste?.vector ?? null;
+        let mergedVector = null;
+        if (existingVector) {
+          mergedVector = {};
+          for (const axis of Object.keys(vector)) {
+            mergedVector[axis] = Math.round(
+              (existingVector[axis] + vector[axis]) / 2
+            );
+          }
+        }
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                {
+                  mode: "from_brands",
+                  vector,
+                  matchedBrands,
+                  unmatchedBrands,
+                  primary_style: topArchetypes[0] ?? null,
+                  secondary_styles: topArchetypes.slice(1),
+                  merged_vector: mergedVector,
+                  instruction: mergedVector
+                    ? "質問診断のベクトルとブランド推定ベクトルの平均(merged_vector)をsave_profileでtaste.vectorに保存することを推奨します。"
+                    : "結果をユーザーに説明し、共感したらsave_profileでtaste.vectorに保存してください。",
+                },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      }
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              error: `不正なmode: ${args.mode}。get_questions / evaluate / from_brands のいずれかを指定してください。`,
+            }),
+          },
+        ],
+      };
     }
 
     case "calibrate": {
