@@ -5,6 +5,8 @@
  * 5軸: decoration(装飾性), formality(フォーマル度), avantgarde(モード感),
  *       structure(構築感), playfulness(遊び心)
  *
+ * v2: 境界付きキーワードマッチ、不在シグナル、ブランドライン認識
+ *
  * ES Module形式 / 外部パッケージ不使用 / Pure functions only
  */
 
@@ -51,29 +53,97 @@ function euclideanDistance(vecA, vecB) {
   return Math.sqrt(sum);
 }
 
-// ─── テキストからベクトル抽出 ──────────────────────────────────────
+// ─── 境界付きキーワードマッチ ────────────────────────────────────
 
 /**
- * 商品テキストからテイストベクトルを推定する
+ * キーワードが文中で「独立した語」としてマッチするか判定
  *
- * 各軸のlow_keywords/high_keywordsとのマッチ数からスコアを算出。
- * マッチなしの軸はニュートラル(50)。
+ * 日本語: そのまま部分文字列マッチ（ただしexclude_contextで誤マッチを除外）
+ * 英語/アルファベット: 単語境界で区切ってマッチ
+ *
+ * @param {string} text - 検索対象テキスト（小文字化済み）
+ * @param {string} keyword - キーワード（小文字化済み）
+ * @param {string[][]} excludeContexts - 除外パターン: このキーワードを含む上位語にマッチしたらスキップ
+ * @returns {boolean}
+ */
+function matchKeyword(text, keyword, excludeContexts) {
+  // まず除外チェック: 「Tシャツ」が先にマッチする場合に「シャツ」単体を除外
+  if (excludeContexts) {
+    for (const ctx of excludeContexts) {
+      if (text.includes(ctx.toLowerCase())) return false;
+    }
+  }
+
+  // 英語キーワードは単語境界でマッチ
+  if (/^[a-z\-]+$/.test(keyword)) {
+    const re = new RegExp(`\\b${keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`);
+    return re.test(text);
+  }
+
+  // 日本語: 部分文字列マッチ
+  return text.includes(keyword);
+}
+
+// ─── ブランドライン認識 ──────────────────────────────────────────
+
+/**
+ * 商品テキストからブランドラインを検出し、テイストベクトルのオフセットを返す
+ *
+ * スタイリストが知っている「同じブランドでもラインが違えば全く別物」という知識をモデル化。
+ * 例: UNIQLO通常 vs UNIQLO U vs UNIQLO x JW Anderson
+ *
+ * @param {string} text - 商品テキスト（元テキスト、大文字小文字そのまま）
+ * @param {Object} brandLines - taste-axes.json の brand_lines セクション
+ * @returns {{ lineName: string, vector: Object } | null}
+ */
+function detectBrandLine(text, brandLines) {
+  if (!brandLines || !text) return null;
+
+  const normalized = text.toLowerCase();
+
+  for (const line of brandLines) {
+    const matches = (line.match_patterns ?? []).some((pat) =>
+      normalized.includes(pat.toLowerCase())
+    );
+    if (matches) {
+      return { lineName: line.label, vector: line.vector };
+    }
+  }
+  return null;
+}
+
+// ─── テキストからベクトル抽出 (v2) ──────────────────────────────
+
+/**
+ * 商品テキストからテイストベクトルを推定する (v2)
+ *
+ * v1からの改善:
+ * - 境界付きキーワードマッチで誤マッチ防止
+ * - decoration軸: 装飾キーワード不在 → ミニマル寄りに推定（不在シグナル）
+ * - ブランドライン検出でベクトルをオーバーライド可能
  *
  * @param {string} text - 商品名+説明テキスト
  * @param {Object} axesKnowledge - taste-axes.json の axes セクション
- * @returns {{ vector: Object, matches: Object }}
+ * @param {Object[]} [brandLines] - taste-axes.json の brand_lines セクション
+ * @returns {{ vector: Object, matches: Object, brandLine: string | null }}
  */
-function extractTasteVector(text, axesKnowledge) {
+function extractTasteVector(text, axesKnowledge, brandLines) {
   if (!text || !axesKnowledge) {
     return {
       vector: Object.fromEntries(AXES.map((a) => [a, DEFAULT_CENTER])),
       matches: {},
+      brandLine: null,
     };
   }
 
   const normalized = text.toLowerCase();
+
+  // ブランドライン検出（マッチすれば部分的にベクトルを上書き）
+  const lineResult = detectBrandLine(text, brandLines);
+
   const vector = {};
   const matches = {};
+  let totalKeywordMatches = 0;
 
   for (const axis of AXES) {
     const axisData = axesKnowledge[axis];
@@ -87,27 +157,32 @@ function extractTasteVector(text, axesKnowledge) {
     const lowMatched = [];
     const highMatched = [];
 
-    for (const kw of axisData.low_keywords ?? []) {
-      if (normalized.includes(kw.toLowerCase())) {
+    // キーワード構造: 文字列 or { word, exclude_when }
+    for (const kwEntry of axisData.low_keywords ?? []) {
+      const kw = typeof kwEntry === "string" ? kwEntry : kwEntry.word;
+      const excludes = typeof kwEntry === "string" ? null : kwEntry.exclude_when;
+      if (matchKeyword(normalized, kw.toLowerCase(), excludes)) {
         lowCount++;
         lowMatched.push(kw);
       }
     }
-    for (const kw of axisData.high_keywords ?? []) {
-      if (normalized.includes(kw.toLowerCase())) {
+    for (const kwEntry of axisData.high_keywords ?? []) {
+      const kw = typeof kwEntry === "string" ? kwEntry : kwEntry.word;
+      const excludes = typeof kwEntry === "string" ? null : kwEntry.exclude_when;
+      if (matchKeyword(normalized, kw.toLowerCase(), excludes)) {
         highCount++;
         highMatched.push(kw);
       }
     }
 
     const total = lowCount + highCount;
+    totalKeywordMatches += total;
+
     if (total === 0) {
       vector[axis] = DEFAULT_CENTER;
     } else {
-      // high比率をスコアに変換 (0-100)
-      // マッチ数が多いほど極端に振れるよう、信頼度で補正
       const highRatio = highCount / total;
-      const confidence = Math.min(1, total / 4); // 4マッチで最大信頼度
+      const confidence = Math.min(1, total / 4);
       vector[axis] = Math.round(DEFAULT_CENTER + (highRatio - 0.5) * 100 * confidence);
       vector[axis] = Math.max(0, Math.min(100, vector[axis]));
     }
@@ -117,7 +192,41 @@ function extractTasteVector(text, axesKnowledge) {
     }
   }
 
-  return { vector, matches };
+  // ─── 不在シグナル: decoration軸 ───
+  // 装飾キーワード(high)が一つもなく、テキストがある程度の長さなら → ミニマル寄り
+  // スタイリストの知識: 「装飾的な記述がない商品はシンプル」
+  if (!matches.decoration && text.length >= 20) {
+    const decoAxis = axesKnowledge.decoration;
+    if (decoAxis) {
+      vector.decoration = 20; // 装飾なし = ミニマル寄り
+      matches.decoration = { low: ["(装飾記述なし→ミニマル推定)"], high: [] };
+    }
+  }
+
+  // ─── 不在シグナル: playfulness軸 ───
+  // ロゴ・グラフィック・ストリート系キーワードが皆無 → ソフィスティケート寄り
+  if (!matches.playfulness && text.length >= 20) {
+    vector.playfulness = 30;
+    matches.playfulness = { low: ["(遊び要素なし→洗練寄り推定)"], high: [] };
+  }
+
+  // ブランドラインが検出された場合、そのベクトルで部分上書き（平均合成）
+  if (lineResult) {
+    for (const axis of AXES) {
+      if (lineResult.vector[axis] !== undefined) {
+        // ライン情報とテキスト抽出の加重平均（ライン60%:テキスト40%）
+        vector[axis] = Math.round(
+          lineResult.vector[axis] * 0.6 + vector[axis] * 0.4
+        );
+      }
+    }
+  }
+
+  return {
+    vector,
+    matches,
+    brandLine: lineResult?.lineName ?? null,
+  };
 }
 
 // ─── ブランドからベクトル推定 ────────────────────────────────────
@@ -145,7 +254,6 @@ function estimateVectorFromBrands(brands, brandVectors) {
 
   for (const brand of brands) {
     const normalizedInput = brand.trim().toLowerCase();
-    // 完全一致 → 部分一致で検索
     let found = null;
     for (const [name, vec] of Object.entries(brandVectors)) {
       if (name.toLowerCase() === normalizedInput) {
@@ -218,8 +326,6 @@ function evaluateDiagnosis(answers, questions) {
     answered++;
   }
 
-  // スコアを0-100にマッピング
-  // 質問10問で各軸の理論最大幅は約±60程度 → ±50を0-100に正規化
   const vector = {};
   for (const axis of AXES) {
     const normalized = DEFAULT_CENTER + scores[axis];
@@ -233,10 +339,6 @@ function evaluateDiagnosis(answers, questions) {
 
 /**
  * ベクトルに最も近いスタイルアーキタイプを返す
- *
- * @param {Object} vector - 5軸ベクトル
- * @param {Object[]} archetypes - taste-axes.json の style_labels.archetypes
- * @returns {{ label: string, description: string, distance: number, representative_brands: string[] }}
  */
 function findNearestArchetype(vector, archetypes) {
   if (!Array.isArray(archetypes) || archetypes.length === 0) {
@@ -264,11 +366,6 @@ function findNearestArchetype(vector, archetypes) {
 
 /**
  * ベクトルに近い順にアーキタイプ上位N件を返す
- *
- * @param {Object} vector
- * @param {Object[]} archetypes
- * @param {number} n
- * @returns {Array<{ label: string, description: string, distance: number, similarity: number }>}
  */
 function findTopArchetypes(vector, archetypes, n = 3) {
   if (!Array.isArray(archetypes)) return [];
@@ -290,15 +387,13 @@ function findTopArchetypes(vector, archetypes, n = 3) {
 /**
  * ユーザーのテイストベクトルと商品テキストの相性スコアを計算
  *
- * スコアリング式:
- *   1. 商品テキストからテイストベクトルを抽出
- *   2. ユーザーベクトルとのコサイン類似度を計算
- *   3. score = clamp(0, 100, (similarity + 1) / 2 * 100)
- *      → -1(真逆) = 0点, 0(無関係) = 50点, 1(完全一致) = 100点
- *   4. キーワードマッチなしの場合はニュートラル(50点)
+ * v2改善:
+ * - 装飾キーワード不在 → ミニマルユーザーには加点
+ * - ブランドライン検出で精度向上
+ * - 境界付きマッチで誤検出削減
  *
  * @param {Object} params
- * @param {Object} params.userVector - ユーザーのテイストベクトル { decoration, formality, ... }
+ * @param {Object} params.userVector - ユーザーのテイストベクトル
  * @param {string} params.productText - 商品テキスト
  * @param {Object} params.tasteKnowledge - taste-axes.json 全体
  * @returns {{ score: number, productVector: Object, matches: Object, reasoning: string }}
@@ -313,7 +408,6 @@ function computeTasteScore({ userVector, productText, tasteKnowledge }) {
     };
   }
 
-  // ユーザーベクトルが全て中央値の場合はニュートラル
   const isNeutral = AXES.every(
     (a) => (userVector[a] ?? DEFAULT_CENTER) === DEFAULT_CENTER
   );
@@ -326,46 +420,34 @@ function computeTasteScore({ userVector, productText, tasteKnowledge }) {
     };
   }
 
-  const { vector: productVector, matches } = extractTasteVector(
+  const { vector: productVector, matches, brandLine } = extractTasteVector(
     productText,
-    tasteKnowledge.axes
+    tasteKnowledge.axes,
+    tasteKnowledge.brand_lines
   );
-
-  // マッチしたキーワードがゼロの場合はニュートラル
-  const totalMatches = Object.values(matches).reduce(
-    (sum, m) => sum + m.low.length + m.high.length,
-    0
-  );
-  if (totalMatches === 0) {
-    return {
-      score: 50,
-      productVector,
-      matches: {},
-      reasoning: "商品テキストからテイスト特徴を抽出できませんでした（ニュートラル）",
-    };
-  }
 
   const similarity = cosineSimilarity(userVector, productVector);
   const rawScore = ((similarity + 1) / 2) * 100;
   const score = Math.round(Math.max(0, Math.min(100, rawScore)));
 
   // reasoning生成
-  const matchSummary = Object.entries(matches)
-    .map(([axis, m]) => {
-      const axisData = tasteKnowledge.axes[axis];
-      const label = axisData?.label ?? axis;
-      const keywords = [...m.high, ...m.low].slice(0, 3).join(", ");
-      return `${label}: ${keywords}`;
-    })
-    .join(" / ");
+  const parts = [];
+  for (const [axis, m] of Object.entries(matches)) {
+    const axisData = tasteKnowledge.axes[axis];
+    const label = axisData?.label ?? axis;
+    const keywords = [...m.high, ...m.low].slice(0, 3).join(", ");
+    parts.push(`${label}: ${keywords}`);
+  }
+  const matchSummary = parts.join(" / ");
+  const lineNote = brandLine ? ` [ライン: ${brandLine}]` : "";
 
   let reasoning;
   if (score >= 70) {
-    reasoning = `テイスト高一致 (${score}点) — ${matchSummary}`;
+    reasoning = `テイスト高一致 (${score}点)${lineNote} — ${matchSummary}`;
   } else if (score >= 40) {
-    reasoning = `テイスト中一致 (${score}点) — ${matchSummary}`;
+    reasoning = `テイスト中一致 (${score}点)${lineNote} — ${matchSummary}`;
   } else {
-    reasoning = `テイスト低一致 (${score}点) — 好みの方向性と異なるテイストです。${matchSummary}`;
+    reasoning = `テイスト低一致 (${score}点)${lineNote} — 好みの方向性と異なるテイストです。${matchSummary}`;
   }
 
   return { score, productVector, matches, reasoning };

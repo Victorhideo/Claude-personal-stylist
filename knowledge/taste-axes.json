@@ -1,25 +1,25 @@
 {
-  "version": "1.0.0",
-  "description": "ファッションテイストを5つの連続軸で定量化するための知識ベース。各軸は0(左極)〜100(右極)のスケールで、ユーザーの好みベクトルと商品テキストのマッチングに使用する。",
+  "version": "2.0.0",
+  "description": "ファッションテイストを5つの連続軸で定量化するための知識ベース。各軸は0(左極)〜100(右極)のスケールで、ユーザーの好みベクトルと商品テキストのマッチングに使用する。v2: 境界付きマッチ、不在シグナル、ブランドライン認識対応。",
 
   "axes": {
     "decoration": {
       "label": "装飾性",
       "low_label": "ミニマル",
       "high_label": "デコラティブ",
-      "description": "装飾・ディテールの量。ミニマル(0)は余計な装飾を排除した純粋なデザイン、デコラティブ(100)は柄・装飾・レイヤードが豊か",
+      "description": "装飾・ディテールの量。ミニマル(0)は余計な装飾を排除した純粋なデザイン、デコラティブ(100)は柄・装飾・レイヤードが豊か。装飾キーワードが皆無の場合はミニマル寄りと推定（不在シグナル）。",
       "low_keywords": [
         "ミニマル", "シンプル", "無地", "ベーシック", "クリーン",
-        "ソリッド", "プレーン", "ワンカラー", "ノーカラー",
+        "ソリッド", "プレーン", "ワンカラー", "ノーカラー", "無駄のない",
         "minimal", "simple", "plain", "solid", "clean", "basic",
         "unadorned", "understated", "sleek", "pared-back"
       ],
       "high_keywords": [
         "装飾", "ディテール", "刺繍", "レース", "フリル",
-        "柄", "プリント", "パッチワーク", "ビジュー", "スタッズ",
-        "タッセル", "フリンジ", "ボタンダウン", "ポケット多",
+        "柄物", "総柄", "プリント", "パッチワーク", "ビジュー", "スタッズ",
+        "タッセル", "フリンジ", "マルチカラー", "ポケット多",
         "embroidery", "lace", "ruffle", "print", "pattern",
-        "embellished", "ornate", "detailed", "studded", "beaded"
+        "embellished", "ornate", "studded", "beaded", "patchwork"
       ]
     },
 
@@ -31,17 +31,18 @@
       "low_keywords": [
         "カジュアル", "デイリー", "リラックス", "イージー",
         "スウェット", "パーカー", "デニム", "スニーカー", "Tシャツ",
-        "ジャージ", "ショートパンツ", "サンダル",
+        "ジャージ", "ショートパンツ", "サンダル", "カットソー",
         "casual", "relaxed", "easy", "everyday", "sweatshirt",
         "hoodie", "denim", "sneaker", "t-shirt", "jersey"
       ],
       "high_keywords": [
-        "ドレス", "フォーマル", "きれいめ", "上品", "エレガント",
-        "テーラード", "ジャケット", "スラックス", "シャツ",
+        "フォーマル", "きれいめ", "上品", "エレガント",
+        "テーラード", "ジャケット", "スラックス",
+        {"word": "シャツ", "exclude_when": ["Tシャツ", "カットソー", "ワイシャツ"]},
         "ブラウス", "ヒール", "ローファー", "革靴",
-        "セットアップ", "スーツ", "タイ",
-        "dress", "formal", "elegant", "tailored", "jacket",
-        "slacks", "shirt", "blouse", "loafer", "oxford"
+        "セットアップ", "スーツ", "ネクタイ", "ドレスシューズ",
+        "formal", "elegant", "tailored", "jacket",
+        "slacks", "blouse", "loafer", "oxford"
       ]
     },
 
@@ -51,17 +52,17 @@
       "high_label": "モード",
       "description": "クラシック(0)は時代を超えた定番・トラッド、モード(100)は実験的・前衛的・デザイナーズ",
       "low_keywords": [
-        "クラシック", "トラッド", "定番", "ベーシック", "王道",
+        "クラシック", "トラッド", "定番", "王道",
         "伝統的", "コンサバ", "正統派", "オーセンティック",
-        "チノ", "ポロ", "ボタンダウン", "ブレザー",
+        "チノ", "ポロシャツ", "ブレザー",
         "classic", "traditional", "timeless", "authentic",
         "conservative", "preppy", "heritage", "ivy"
       ],
       "high_keywords": [
         "モード", "アバンギャルド", "前衛", "実験的", "デザイナーズ",
         "アシンメトリー", "ドレープ", "構築的", "脱構築",
-        "オーバーサイズ", "レイヤード", "アーキテクチャル",
-        "ジェンダーレス", "アート",
+        "レイヤード", "アーキテクチャル",
+        "ジェンダーレス", "アート", "立体的",
         "mode", "avant-garde", "experimental", "deconstructed",
         "architectural", "asymmetric", "drape", "conceptual"
       ]
@@ -76,13 +77,15 @@
         "リラックス", "ルーズ", "ゆったり", "ドロップショルダー",
         "オーバーサイズ", "ワイド", "ビッグシルエット", "だぼっと",
         "フリーサイズ", "ストレッチ", "ニット", "スウェット",
+        "リラックスフィット",
         "relaxed", "loose", "oversized", "wide", "baggy",
         "drop-shoulder", "boxy", "unstructured", "soft"
       ],
       "high_keywords": [
         "タイト", "スリム", "テーラード", "ジャストサイズ",
         "タック", "ダーツ", "肩パッド", "仕立て", "構築",
-        "フィット", "ペンシル", "テーパード", "タイトスカート",
+        {"word": "フィット", "exclude_when": ["リラックスフィット", "コンフォートフィット"]},
+        "ペンシル", "テーパード",
         "structured", "tailored", "fitted", "slim", "tapered",
         "darted", "sculpted", "sharp", "precise"
       ]
@@ -92,7 +95,7 @@
       "label": "遊び心",
       "low_label": "ソフィスティケート",
       "high_label": "プレイフル",
-      "description": "ソフィスティケート(0)は洗練・大人・知的、プレイフル(100)はポップ・ストリート・遊び心のあるスタイル",
+      "description": "ソフィスティケート(0)は洗練・大人・知的、プレイフル(100)はポップ・ストリート・遊び心のあるスタイル。遊び系キーワードが皆無の場合はソフィスティケート寄りと推定。",
       "low_keywords": [
         "洗練", "知的", "大人", "上質", "ラグジュアリー",
         "シック", "ノーブル", "マチュア", "落ち着いた",
@@ -103,13 +106,64 @@
       "high_keywords": [
         "ストリート", "ポップ", "スポーティ", "カラフル",
         "グラフィック", "ロゴ", "スケーター", "ヒップホップ",
-        "ネオン", "蛍光", "ビビッド", "ボーダー", "チェック",
-        "ワッペン", "アウトドア",
+        "ネオン", "蛍光", "ビビッド", "ワッペン", "アウトドア",
+        "フロントプリント", "バックプリント",
         "street", "pop", "sporty", "colorful", "graphic",
         "logo", "skater", "hip-hop", "vivid", "bold"
       ]
     }
   },
+
+  "brand_lines": [
+    {
+      "label": "UNIQLO U",
+      "description": "Christophe Lemaire監修のデザイナーズライン。通常UNIQLOよりモード寄り・構築的",
+      "match_patterns": ["ユニクロu", "uniqlo u", "ユニクロ u", "uniqlo:c"],
+      "vector": { "decoration": 10, "formality": 55, "avantgarde": 55, "structure": 55, "playfulness": 10 }
+    },
+    {
+      "label": "UNIQLO x JW Anderson",
+      "description": "JWアンダーソンとのコラボ。デコラティブ・実験的で通常UNIQLOとは別物",
+      "match_patterns": ["jwアンダーソン", "jw anderson", "jw アンダーソン"],
+      "vector": { "decoration": 45, "formality": 50, "avantgarde": 70, "structure": 45, "playfulness": 45 }
+    },
+    {
+      "label": "UNIQLO +J",
+      "description": "Jil Sander共同制作ライン。ミニマルかつ上質な素材使い",
+      "match_patterns": ["+j", "プラスj", "ジルサンダー"],
+      "vector": { "decoration": 5, "formality": 65, "avantgarde": 60, "structure": 60, "playfulness": 5 }
+    },
+    {
+      "label": "ZARA SRPLS / Studio",
+      "description": "ZARAのハイエンドライン。ミニマルモード寄り",
+      "match_patterns": ["zara srpls", "zara studio", "ザラ スタジオ"],
+      "vector": { "decoration": 15, "formality": 60, "avantgarde": 60, "structure": 60, "playfulness": 10 }
+    },
+    {
+      "label": "ZARA TRF",
+      "description": "ZARAの若年トレンドライン。ストリート・ポップ寄り",
+      "match_patterns": ["zara trf", "trf"],
+      "vector": { "decoration": 40, "formality": 20, "avantgarde": 40, "structure": 30, "playfulness": 70 }
+    },
+    {
+      "label": "THE NORTH FACE PURPLE LABEL",
+      "description": "nanamica監修の日本限定ライン。アウトドアの機能性とモード感の融合",
+      "match_patterns": ["パープルレーベル", "purple label"],
+      "vector": { "decoration": 15, "formality": 40, "avantgarde": 50, "structure": 45, "playfulness": 30 }
+    },
+    {
+      "label": "BEAMS PLUS",
+      "description": "BEAMSのアメトラ・ヘリテージライン。クラシック寄り",
+      "match_patterns": ["beams plus", "ビームスプラス"],
+      "vector": { "decoration": 20, "formality": 55, "avantgarde": 10, "structure": 55, "playfulness": 20 }
+    },
+    {
+      "label": "BEAMS T",
+      "description": "BEAMSのストリート・グラフィックライン",
+      "match_patterns": ["beams t"],
+      "vector": { "decoration": 35, "formality": 15, "avantgarde": 30, "structure": 25, "playfulness": 70 }
+    }
+  ],
 
   "brand_vectors": {
     "description": "代表的なブランドのテイストベクトル。ユーザーが好きなブランドを挙げたときにプロフィールのベクトル推定に使用",
