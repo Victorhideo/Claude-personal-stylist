@@ -22,6 +22,7 @@ import * as path from "path";
 import { fileURLToPath } from "url";
 import "dotenv/config";
 import { scoreAndRankProducts } from "./models/style-scorer.js";
+import { evaluateDiagnosis, estimateVectorFromBrands, findTopArchetypes } from "./models/taste-engine.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROFILE_PATH = path.join(__dirname, "..", "profile.json");
@@ -45,6 +46,7 @@ function loadAllKnowledge() {
     face: "face-types.json",
     body: "body-proportions.json",
     coordination: "coordination-rules.json",
+    taste: "taste-axes.json",
   };
   const knowledge = {};
   for (const [key, filename] of Object.entries(files)) {
@@ -1046,6 +1048,35 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       },
     },
     {
+      name: "diagnose_taste",
+      description:
+        "テイスト診断ツール。ファッションの好みを5軸（装飾性・フォーマル度・モード感・構築感・遊び心）で数値化します。mode='get_questions'で10問の質問リストを返し、mode='evaluate'で回答からテイストベクトルを算出。mode='from_brands'で好きなブランドからベクトルを推定。",
+      inputSchema: {
+        type: "object",
+        properties: {
+          mode: {
+            type: "string",
+            enum: ["get_questions", "evaluate", "from_brands"],
+            description:
+              "get_questions: 質問リストを取得 / evaluate: 回答を評価してベクトル算出 / from_brands: 好きなブランドからベクトル推定",
+          },
+          answers: {
+            type: "array",
+            items: { type: "number" },
+            description:
+              "mode='evaluate' のとき必須。各質問への回答選択肢インデックス（0始まり）の配列。長さは1〜10。",
+          },
+          brands: {
+            type: "array",
+            items: { type: "string" },
+            description:
+              "mode='from_brands' のとき必須。好きなブランド名の配列（例: ['Jil Sander', 'UNIQLO', 'COMOLI']）",
+          },
+        },
+        required: ["mode"],
+      },
+    },
+    {
       name: "calibrate",
       description: "ユーザーのフィードバックから推奨寸法の補正値を調整。「前回の着丈提案が長かった」→ top_length_offsetを-1cm調整。使えば使うほどフィット精度が上がります。",
       inputSchema: {
@@ -1544,6 +1575,147 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           ],
         };
       }
+    }
+
+    case "diagnose_taste": {
+      const knowledge = loadAllKnowledge();
+      const tasteKnowledge = knowledge.taste;
+
+      if (args.mode === "get_questions") {
+        const questions = tasteKnowledge.diagnosis_questions.questions.map((q) => ({
+          id: q.id,
+          text: q.text,
+          options: q.options.map((o, idx) => ({ index: idx, text: o.text })),
+        }));
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                {
+                  mode: "get_questions",
+                  count: questions.length,
+                  questions,
+                  instruction:
+                    "10問の質問を1問ずつ会話形式で聞いてください。全問回答後、mode='evaluate'で回答配列を送信してベクトルを算出してください。途中回答でも評価可能です。",
+                },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      }
+
+      if (args.mode === "evaluate") {
+        if (!Array.isArray(args.answers) || args.answers.length === 0) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify({ error: "answers 配列が必要です" }),
+              },
+            ],
+          };
+        }
+        const questions = tasteKnowledge.diagnosis_questions.questions;
+        const { vector, answered } = evaluateDiagnosis(args.answers, questions);
+        const topArchetypes = findTopArchetypes(
+          vector,
+          tasteKnowledge.style_labels.archetypes,
+          3
+        );
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                {
+                  mode: "evaluate",
+                  vector,
+                  answered,
+                  primary_style: topArchetypes[0] ?? null,
+                  secondary_styles: topArchetypes.slice(1),
+                  instruction:
+                    "結果をユーザーに説明し、共感したらsave_profileでtaste.vectorに保存してください。ブランド情報もあればfrom_brandsで補正することを推奨します。",
+                },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      }
+
+      if (args.mode === "from_brands") {
+        if (!Array.isArray(args.brands) || args.brands.length === 0) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify({ error: "brands 配列が必要です" }),
+              },
+            ],
+          };
+        }
+        const brandVectors = tasteKnowledge.brand_vectors.brands;
+        const { vector, matchedBrands, unmatchedBrands } =
+          estimateVectorFromBrands(args.brands, brandVectors);
+        const topArchetypes = findTopArchetypes(
+          vector,
+          tasteKnowledge.style_labels.archetypes,
+          3
+        );
+
+        // 既存の診断ベクトルがある場合は平均を提案
+        const profile = loadProfile();
+        const existingVector = profile?.taste?.vector ?? null;
+        let mergedVector = null;
+        if (existingVector) {
+          mergedVector = {};
+          for (const axis of Object.keys(vector)) {
+            mergedVector[axis] = Math.round(
+              (existingVector[axis] + vector[axis]) / 2
+            );
+          }
+        }
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                {
+                  mode: "from_brands",
+                  vector,
+                  matchedBrands,
+                  unmatchedBrands,
+                  primary_style: topArchetypes[0] ?? null,
+                  secondary_styles: topArchetypes.slice(1),
+                  merged_vector: mergedVector,
+                  instruction: mergedVector
+                    ? "質問診断のベクトルとブランド推定ベクトルの平均(merged_vector)をsave_profileでtaste.vectorに保存することを推奨します。"
+                    : "結果をユーザーに説明し、共感したらsave_profileでtaste.vectorに保存してください。",
+                },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      }
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              error: `不正なmode: ${args.mode}。get_questions / evaluate / from_brands のいずれかを指定してください。`,
+            }),
+          },
+        ],
+      };
     }
 
     case "calibrate": {

@@ -9,14 +9,19 @@ import { computeColorScore } from "./color-engine.js";
 import { computeSilhouetteScore, extractProductFeatures } from "./silhouette-engine.js";
 import { computeProportionScore } from "./proportion-engine.js";
 import { computeTrendScore } from "./trend-engine.js";
+import { computeTasteScore } from "./taste-engine.js";
 
 // ─── 重み定義 ────────────────────────────────────────────────────────────────
+// テイスト軸を追加し、「似合う」と「好き」のバランスを取る配分
+// color(25%) + silhouette(20%) + proportion(15%) + material(10%) = 70% (似合う)
+// taste(20%) + trend(10%) = 30% (好き・今っぽさ)
 
 const WEIGHTS = {
-  color: 0.30,
-  silhouette: 0.25,
-  proportion: 0.20,
-  material: 0.15,
+  color: 0.25,
+  silhouette: 0.20,
+  proportion: 0.15,
+  material: 0.10,
+  taste: 0.20,
   trend: 0.10,
 };
 
@@ -24,38 +29,26 @@ const WEIGHTS = {
 
 /**
  * 各スコアをもとに日本語の説明文リストを生成する
- * @param {{ colorScore: number, silhouetteScore: number, materialScore: number, proportionScore: number, trendScore: number }} scores
- * @param {{ colorReasoning: string, silhouetteReasoning: string, proportionReasoning: string, trendReasoning: string }} details
+ * @param {{ colorScore: number, silhouetteScore: number, materialScore: number, proportionScore: number, tasteScore: number, trendScore: number }} scores
+ * @param {{ colorReasoning: string, silhouetteReasoning: string, proportionReasoning: string, tasteReasoning: string, trendReasoning: string }} details
  * @returns {string[]}
  */
 function buildReasoning(scores, details) {
   const lines = [];
 
+  const level = (s) => s >= 70 ? "高" : s >= 40 ? "中" : "低";
+
   // カラー
-  if (scores.colorScore >= 70) {
-    lines.push(`カラー相性: 高 (${scores.colorScore}点) — ${details.colorReasoning}`);
-  } else if (scores.colorScore >= 40) {
-    lines.push(`カラー相性: 中 (${scores.colorScore}点) — ${details.colorReasoning}`);
-  } else {
-    lines.push(`カラー相性: 低 (${scores.colorScore}点) — ${details.colorReasoning}`);
-  }
+  lines.push(`カラー相性: ${level(scores.colorScore)} (${scores.colorScore}点) — ${details.colorReasoning}`);
 
   // シルエット
-  if (scores.silhouetteScore >= 70) {
-    lines.push(`シルエット適合: 高 (${scores.silhouetteScore}点) — ${details.silhouetteReasoning}`);
-  } else if (scores.silhouetteScore >= 40) {
-    lines.push(`シルエット適合: 中 (${scores.silhouetteScore}点) — ${details.silhouetteReasoning}`);
-  } else {
-    lines.push(`シルエット適合: 低 (${scores.silhouetteScore}点) — ${details.silhouetteReasoning}`);
-  }
+  lines.push(`シルエット適合: ${level(scores.silhouetteScore)} (${scores.silhouetteScore}点) — ${details.silhouetteReasoning}`);
 
   // 素材
-  if (scores.materialScore >= 70) {
-    lines.push(`素材適合: 高 (${scores.materialScore}点)`);
-  } else if (scores.materialScore >= 40) {
-    lines.push(`素材適合: 中 (${scores.materialScore}点)`);
-  } else {
+  if (scores.materialScore < 40) {
     lines.push(`素材適合: 低 (${scores.materialScore}点) — 骨格タイプに不向きな素材が含まれている可能性があります`);
+  } else {
+    lines.push(`素材適合: ${level(scores.materialScore)} (${scores.materialScore}点)`);
   }
 
   // プロポーション
@@ -63,6 +56,13 @@ function buildReasoning(scores, details) {
     lines.push(`プロポーション: 良好 (${scores.proportionScore}点) — ${details.proportionReasoning}`);
   } else {
     lines.push(`プロポーション: 要確認 (${scores.proportionScore}点) — ${details.proportionReasoning}`);
+  }
+
+  // テイスト
+  if (details.tasteReasoning) {
+    lines.push(`テイスト: ${details.tasteReasoning}`);
+  } else {
+    lines.push(`テイスト: スコア ${scores.tasteScore}点（テイスト未診断）`);
   }
 
   // トレンド
@@ -80,7 +80,7 @@ function buildReasoning(scores, details) {
 /**
  * スコアとプロフィールをもとに改善提案を生成
  * @param {number} totalScore
- * @param {{ colorScore: number, silhouetteScore: number, materialScore: number, proportionScore: number }} breakdown
+ * @param {{ colorScore: number, silhouetteScore: number, materialScore: number, proportionScore: number, tasteScore: number }} breakdown
  * @returns {string[]}
  */
 function buildRecommendations(totalScore, breakdown) {
@@ -102,6 +102,9 @@ function buildRecommendations(totalScore, breakdown) {
   }
   if (breakdown.materialScore < 40) {
     recs.push("素材が骨格タイプに向かない可能性があります。手触りや重さを実際に確かめてみてください。");
+  }
+  if (breakdown.tasteScore < 40) {
+    recs.push("好みのテイストとやや方向性が異なるアイテムです。気分転換として試すのもありですが、普段使いには他の候補も検討してみてください。");
   }
 
   return recs;
@@ -143,7 +146,6 @@ export function scoreProduct({ profile, product, knowledge, trendTexts = [] }) {
     colorScore = colorResult.score;
     colorReasoning = colorResult.reasoning;
   } else if (personalColor && productText) {
-    // colors 配列がない場合、テキストから色名を推測してフォールバック
     colorReasoning = `パーソナルカラー「${personalColor}」。商品カラー情報なし（ニュートラルスコア）`;
   }
 
@@ -190,7 +192,22 @@ export function scoreProduct({ profile, product, knowledge, trendTexts = [] }) {
     proportionReasoning = propResult.reasoning;
   }
 
-  // 5. トレンドスコア（TF-IDFコサイン類似度）
+  // 5. テイストスコア
+  const userTasteVector = profile.taste?.vector ?? null;
+  let tasteScore = 50;
+  let tasteReasoning = "";
+
+  if (userTasteVector && knowledge.taste) {
+    const tasteResult = computeTasteScore({
+      userVector: userTasteVector,
+      productText,
+      tasteKnowledge: knowledge.taste,
+    });
+    tasteScore = tasteResult.score;
+    tasteReasoning = tasteResult.reasoning;
+  }
+
+  // 6. トレンドスコア（TF-IDFコサイン類似度）
   const trendQueries = profile.trend_queries ?? [];
   const trendResult = computeTrendScore({
     trendTexts,
@@ -199,12 +216,13 @@ export function scoreProduct({ profile, product, knowledge, trendTexts = [] }) {
   });
   const trendScore = trendResult.score;
 
-  // 6. 総合スコア（加重平均）
+  // 7. 総合スコア（加重平均）
   const totalScore = Math.round(
     colorScore * WEIGHTS.color +
     silhouetteScore * WEIGHTS.silhouette +
     proportionScore * WEIGHTS.proportion +
     materialScore * WEIGHTS.material +
+    tasteScore * WEIGHTS.taste +
     trendScore * WEIGHTS.trend
   );
 
@@ -213,21 +231,23 @@ export function scoreProduct({ profile, product, knowledge, trendTexts = [] }) {
     silhouetteScore,
     materialScore,
     proportionScore,
+    tasteScore,
     trendScore,
   };
 
-  // 7. reasoning（日本語説明）
+  // 8. reasoning（日本語説明）
   const reasoning = buildReasoning(
-    { colorScore, silhouetteScore, materialScore, proportionScore, trendScore },
+    { colorScore, silhouetteScore, materialScore, proportionScore, tasteScore, trendScore },
     {
       colorReasoning,
       silhouetteReasoning,
       proportionReasoning,
+      tasteReasoning,
       trendReasoning: trendResult.reasoning,
     }
   );
 
-  // 8. recommendations
+  // 9. recommendations
   const recommendations = buildRecommendations(totalScore, breakdown);
 
   return { totalScore, breakdown, reasoning, recommendations };

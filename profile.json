@@ -22,6 +22,8 @@
   },
 
   "taste": {
+    "vector": null,
+    "style_label": "",
     "target_vibes": [],
     "favorite_brands": [],
     "favorite_people": [],
@@ -75,6 +77,7 @@
   "diagnosis_history": {
     "skeleton_diagnosed_at": null,
     "color_diagnosed_at": null,
+    "taste_diagnosed_at": null,
     "last_updated": null
   },
 
