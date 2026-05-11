@@ -290,6 +290,28 @@
   }
   .item-price.premium { color: var(--brown); }
 
+  /* BUY BUTTON */
+  .buy-btn {
+    display: inline-block;
+    margin-top: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--navy);
+    text-decoration: none;
+    border: 1.5px solid var(--navy);
+    padding: 4px 11px;
+    border-radius: 4px;
+    transition: all 0.15s;
+    letter-spacing: 0.3px;
+  }
+  .buy-btn:hover { background: var(--navy); color: #fff; }
+  .buy-note {
+    font-size: 11px;
+    color: var(--muted);
+    font-style: italic;
+    margin-top: 6px;
+  }
+
   /* RESPONSIVE */
   @media (max-width: 600px) {
     .header { padding: 24px 20px 20px; }
@@ -1485,6 +1507,90 @@
 </div><!-- /content -->
 
 <script>
+// Brand → URL mapping (homepages oficiais)
+const brandUrls = {
+  'Uniqlo':           'https://www.uniqlo.com/jp/ja/',
+  'Zara':             'https://www.zara.com/jp/ja/man-l1.html',
+  "Levi's":           'https://www.levi.com/ja-JP/',
+  'Banana Republic':  'https://bananarepublic.gap.com/',
+  'Adidas':           'https://www.adidas.com/ja',
+  'Vans':             'https://www.vans.co.jp/',
+  'ABC Mart':         'https://www.abc-mart.net/',
+  'Sunspel':          'https://www.sunspel.com/',
+  "Drake's":          'https://www.drakes.com/',
+  'John Smedley':     'https://www.johnsmedley.com/',
+  'Arket':            'https://www.arket.com/',
+  'COS':              'https://www.cos.com/',
+  'Massimo Dutti':    'https://www.massimodutti.com/',
+  'Incotex':          'https://www.incotex.com/',
+  'Momotaro':         'https://www.momotaro-jeans.com/',
+  'Meermin':          'https://www.meermin.es/',
+  "Tricker's":        'https://www.trickers.com/',
+  'Common Projects':  'https://www.commonprojects.com/',
+  'Paraboot':         'https://www.paraboot.com/',
+  'Private White':    'https://www.privatwhite.com/',
+  'Mackintosh':       'https://www.mackintosh.com/',
+  'Johnstons':        'https://www.johnstonsofelgin.com/',
+  'Begg':             'https://www.beggandco.com/',
+  'Oliver Peoples':   'https://www.oliverpeoples.com/',
+  'Pantherella':      'https://www.pantherella.com/',
+  'Tabio':            'https://www.tabio.com/jp/',
+  'JINS':             'https://www.jins.com/jp/',
+  'Zoff':             'https://www.zoff.co.jp/',
+  'Seiko':            'https://www.seikowatches.com/jp-ja/',
+  'Orient':           'https://www.orient-watch.jp/',
+  'Eyevan':           'https://eyevan.com/',
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.item-card').forEach(card => {
+    const brandEl = card.querySelector('.item-brand');
+    const searchEl = card.querySelector('.item-search');
+    if (!brandEl || !searchEl) return;
+
+    const brandText = brandEl.textContent;
+    let matched = null;
+
+    for (const [key, url] of Object.entries(brandUrls)) {
+      if (brandText.includes(key)) { matched = { key, url }; break; }
+    }
+
+    if (matched) {
+      const btn = document.createElement('a');
+      btn.href = matched.url;
+      btn.target = '_blank';
+      btn.rel = 'noopener noreferrer';
+      btn.textContent = `Abrir ${matched.key} →`;
+      btn.className = 'buy-btn';
+      searchEl.insertAdjacentElement('afterend', btn);
+
+      // Se a marca tem múltiplos links, adiciona o segundo
+      const brandText2 = brandEl.textContent;
+      let second = null;
+      let found = false;
+      for (const [key2, url2] of Object.entries(brandUrls)) {
+        if (found && brandText2.includes(key2)) { second = { key: key2, url: url2 }; break; }
+        if (key2 === matched.key) found = true;
+      }
+      if (second) {
+        const btn2 = document.createElement('a');
+        btn2.href = second.url;
+        btn2.target = '_blank';
+        btn2.rel = 'noopener noreferrer';
+        btn2.textContent = `Abrir ${second.key} →`;
+        btn2.className = 'buy-btn';
+        btn2.style.marginLeft = '6px';
+        btn.insertAdjacentElement('afterend', btn2);
+      }
+    } else {
+      const note = document.createElement('div');
+      note.className = 'buy-note';
+      note.textContent = '→ Buscar no Google pelo nome da marca';
+      searchEl.insertAdjacentElement('afterend', note);
+    }
+  });
+});
+
 function switchTab(tab) {
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
