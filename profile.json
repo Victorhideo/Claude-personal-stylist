@@ -41,8 +41,28 @@
 
   "wardrobe": {
     "key_items": ["gym clothes (basic)", "weekend clothes"],
-    "missing_items": ["quality basic t-shirts (straight fit)", "chinos or straight-leg trousers", "versatile shoes", "structured casual jacket"],
-    "seasonal_gaps": []
+    "missing_items": [
+      "quality basic t-shirts (straight fit, Supima)",
+      "chino slim caramelo",
+      "jeans straight indigo escuro",
+      "calca slim preta",
+      "polo navy",
+      "camisa oxford OCBD",
+      "camisa linho manga curta",
+      "moletom crew neck cinza",
+      "cardigan merino caramelo",
+      "chester coat",
+      "jaqueta harrington olive",
+      "HEATTECH set",
+      "tenis couro branco",
+      "loafer marrom chocolate",
+      "chelsea boot preta",
+      "cachecol la caramelo",
+      "meias kit (Tabio)",
+      "oculos acetato tortoise/havana",
+      "cinto couro marrom"
+    ],
+    "seasonal_gaps": ["inverno japonês (frio 0-10°C)", "verão japonês (quente/umido 25-35°C)"]
   },
 
   "shopping": {
@@ -79,7 +99,11 @@
     "material_restrictions": []
   },
 
-  "trend_queries": [],
+  "trend_queries": [
+    "Uniqlo menswear essentials 2026 Japan",
+    "minimal smart casual men Japan 2026",
+    "autumn personal color men outfits"
+  ],
 
   "pinterest_board_urls": [],
 
