@@ -1,41 +1,47 @@
 {
-  "nickname": "",
-  "gender": "",
+  "nickname": "Victor",
+  "gender": "male",
   "age_range": "",
 
   "body": {
-    "height_cm": null,
-    "weight_kg": null,
-    "skeleton_type": "",
+    "height_cm": 168,
+    "weight_kg": 83,
+    "skeleton_type": "straight",
     "face_type": "",
-    "personal_color": "",
-    "shoulder_width": "",
-    "body_shape": "",
-    "concerns": []
+    "personal_color": "autumn",
+    "shoulder_width": "broad",
+    "body_shape": "upper-body dominant, abdomen volume",
+    "concerns": ["tight shirts emphasize upper body volume", "tank tops unflattering", "difficulty pairing shoes", "abdomen area"]
   },
 
   "lifestyle": {
     "occupation": "",
-    "dress_code": "",
-    "main_scenes": [],
+    "dress_code": "casual",
+    "main_scenes": ["home office", "gym", "weekend"],
     "climate": ""
   },
 
   "taste": {
-    "vector": null,
-    "style_label": "",
-    "target_vibes": [],
-    "favorite_brands": [],
-    "favorite_people": [],
-    "avoid": [],
-    "preferred_fit": "",
-    "color_preference": "",
-    "pattern_preference": []
+    "vector": {
+      "minimal": 0.85,
+      "smart_casual": 0.80,
+      "street": 0.15,
+      "sporty": 0.25,
+      "formal": 0.35
+    },
+    "style_label": "Smart Casual Minimalista",
+    "target_vibes": ["clean", "simple", "presentable", "elegant", "European smart casual"],
+    "favorite_brands": ["Zara", "Uniqlo", "Hugo Boss", "Gas", "Banana Republic", "Levi's"],
+    "favorite_people": ["Charles Leclerc"],
+    "avoid": ["tank tops", "tight fitted shirts", "heavy logos", "oversized streetwear"],
+    "preferred_fit": "just-fit, not tight, not baggy — straight silhouette",
+    "color_preference": "earth tones, warm neutrals — terracotta, olive, camel, dark brown, warm grey, navy",
+    "pattern_preference": ["solid colors", "minimal patterns"]
   },
 
   "wardrobe": {
-    "key_items": [],
-    "missing_items": [],
+    "key_items": ["gym clothes (basic)", "weekend clothes"],
+    "missing_items": ["quality basic t-shirts (straight fit)", "chinos or straight-leg trousers", "versatile shoes", "structured casual jacket"],
     "seasonal_gaps": []
   },
 
@@ -47,38 +53,41 @@
       "bottoms": "",
       "shoes_cm": null
     },
-    "size_notes": "",
+    "size_notes": "Straight skeleton type — avoid tight fits that emphasize upper body volume; prefer structured cuts with some room in the chest",
     "stores": [
       {
-        "name": "UNIQLO",
-        "urls": [
-          "https://www.uniqlo.com/jp/ja/men/tops/t-shirts",
-          "https://www.uniqlo.com/jp/ja/men/bottoms",
-          "https://www.uniqlo.com/jp/ja/men/outerwear"
-        ]
+        "name": "Zara",
+        "urls": []
       },
       {
-        "name": "ZARA",
-        "urls": [
-          "https://www.zara.com/jp/ja/man-l1.html"
-        ]
+        "name": "Uniqlo",
+        "urls": []
+      },
+      {
+        "name": "Hugo Boss",
+        "urls": []
+      },
+      {
+        "name": "Banana Republic",
+        "urls": []
+      },
+      {
+        "name": "Levi's",
+        "urls": []
       }
     ],
     "material_restrictions": []
   },
 
-  "trend_queries": [
-    "ユニクロ 名品 2026",
-    "ZARA おすすめ メンズ 春"
-  ],
+  "trend_queries": [],
 
   "pinterest_board_urls": [],
 
   "diagnosis_history": {
-    "skeleton_diagnosed_at": null,
-    "color_diagnosed_at": null,
-    "taste_diagnosed_at": null,
-    "last_updated": null
+    "skeleton_diagnosed_at": "2026-05-11",
+    "color_diagnosed_at": "2026-05-11",
+    "taste_diagnosed_at": "2026-05-11",
+    "last_updated": "2026-05-11"
   },
 
   "calibration": {
