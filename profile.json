@@ -46,14 +46,14 @@
   },
 
   "shopping": {
-    "budget_per_item_yen": null,
-    "monthly_budget_yen": null,
+    "budget_per_item_brl": 200,
+    "monthly_budget_brl": null,
     "preferred_sizes": {
-      "tops": "",
-      "bottoms": "",
+      "tops": "M",
+      "bottoms": "40-42",
       "shoes_cm": null
     },
-    "size_notes": "Straight skeleton type — avoid tight fits that emphasize upper body volume; prefer structured cuts with some room in the chest",
+    "size_notes": "Straight skeleton type — avoid tight fits that emphasize upper body volume; prefer structured cuts with some room in the chest. M in tops may run tight in chest/shoulders depending on brand — check measurements.",
     "stores": [
       {
         "name": "Zara",
