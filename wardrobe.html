@@ -1262,7 +1262,7 @@
         <div class="item-card p1">
           <div class="card-top">
             <div>
-              <div class="item-name">Chino Slim — Caramelo</div>
+              <div class="item-name">Chino Slim — Caramelo (Incotex)</div>
               <div class="item-brand">Incotex (Itália)</div>
               <div class="item-search">Buscar: "Slim Fit Chino" — incotex.com ou lojas multimarca JP</div>
             </div>
@@ -1507,85 +1507,169 @@
 </div><!-- /content -->
 
 <script>
-// Brand → URL mapping (homepages oficiais)
-const brandUrls = {
-  'Uniqlo':           'https://www.uniqlo.com/jp/ja/',
-  'Zara':             'https://www.zara.com/jp/ja/man-l1.html',
-  "Levi's":           'https://www.levi.com/ja-JP/',
-  'Banana Republic':  'https://bananarepublic.gap.com/',
-  'Adidas':           'https://www.adidas.com/ja',
-  'Vans':             'https://www.vans.co.jp/',
-  'ABC Mart':         'https://www.abc-mart.net/',
-  'Sunspel':          'https://www.sunspel.com/',
-  "Drake's":          'https://www.drakes.com/',
-  'John Smedley':     'https://www.johnsmedley.com/',
-  'Arket':            'https://www.arket.com/',
-  'COS':              'https://www.cos.com/',
-  'Massimo Dutti':    'https://www.massimodutti.com/',
-  'Incotex':          'https://www.incotex.com/',
-  'Momotaro':         'https://www.momotaro-jeans.com/',
-  'Meermin':          'https://www.meermin.es/',
-  "Tricker's":        'https://www.trickers.com/',
-  'Common Projects':  'https://www.commonprojects.com/',
-  'Paraboot':         'https://www.paraboot.com/',
-  'Private White':    'https://www.privatwhite.com/',
-  'Mackintosh':       'https://www.mackintosh.com/',
-  'Johnstons':        'https://www.johnstonsofelgin.com/',
-  'Begg':             'https://www.beggandco.com/',
-  'Oliver Peoples':   'https://www.oliverpeoples.com/',
-  'Pantherella':      'https://www.pantherella.com/',
-  'Tabio':            'https://www.tabio.com/jp/',
-  'JINS':             'https://www.jins.com/jp/',
-  'Zoff':             'https://www.zoff.co.jp/',
-  'Seiko':            'https://www.seikowatches.com/jp-ja/',
-  'Orient':           'https://www.orient-watch.jp/',
-  'Eyevan':           'https://eyevan.com/',
+// Links exatos de produto por nome do item
+const productLinks = {
+  // ── BUDGET: CASACOS ──
+  'Chester Coat de Lã':
+    'https://www.uniqlo.com/jp/ja/products/E471723-000/00',
+  'Ultra Light Down Jacket':
+    'https://www.uniqlo.com/jp/ja/products/E463247-000/00',
+  'Jaqueta Harrington':
+    'https://www.zara.com/jp/ja/man-jackets-basics-l642.html',
+
+  // ── BUDGET: HEATTECH ──
+  'HEATTECH Extra Warm — Camiseta':
+    'https://www.uniqlo.com/jp/ja/products/E419094-000/00',
+  'HEATTECH Extra Warm — Calça':
+    'https://www.uniqlo.com/jp/ja/men/innerwear/heattech',
+
+  // ── BUDGET: CAMISAS ──
+  'Camisa Oxford Botão (OCBD)':
+    'https://www.uniqlo.com/jp/ja/products/E450259-000/00',
+  'Camisa Linho Manga Curta':
+    'https://www.uniqlo.com/jp/ja/products/E477181-000/00',
+  'Camisa Flanela (quadriculada fina)':
+    'https://www.uniqlo.com/jp/ja/men/tops/shirts',
+
+  // ── BUDGET: TOPS ──
+  'Camiseta Supima Cotton — Off-white':
+    'https://www.uniqlo.com/jp/ja/products/E455365-000/00?colorDisplayCode=00',
+  'Camiseta Supima Cotton — Preta':
+    'https://www.uniqlo.com/jp/ja/products/E455365-000/00',
+  'Polo Piqué':
+    'https://www.uniqlo.com/jp/ja/products/E455388-000/00',
+  'Camiseta — Terracota':
+    'https://www.zara.com/jp/ja/man-tshirts-l855.html',
+  'Moletom Crew Neck':
+    'https://www.uniqlo.com/jp/ja/products/E442515-000/00',
+  'Camiseta Linho':
+    'https://www.uniqlo.com/jp/ja/men/tops/shirts',
+
+  // ── BUDGET: MID-LAYER ──
+  'Cardigan Merino V-Neck':
+    'https://www.uniqlo.com/jp/ja/products/E435791-000/00',
+  'Fleece Full-Zip Jacket':
+    'https://www.uniqlo.com/jp/ja/products/E462028-000/00',
+
+  // ── BUDGET: CALÇAS ──
+  'Jeans Straight/Taper — Índigo Escuro':
+    'https://www.levi.com/US/en_US/clothing/men/jeans/taper/japanese-selvedge-502TM-taper-fit-mens-jeans/p/A58810000',
+  'Chino Slim — Caramelo':
+    'https://www.uniqlo.com/jp/ja/products/E450251-000/00',
+  'Calça Slim — Preta':
+    'https://www.zara.com/jp/ja/straight-leg-low-rise-trousers-p04432517.html',
+  'Calça Jogger / Smart Sweat':
+    'https://www.uniqlo.com/jp/ja/products/E453843-000/00',
+
+  // ── BUDGET: CALÇADOS ──
+  'Tênis Couro Limpo — Branco':
+    'https://www.adidas.com/us/stan-smith-shoes/M20324.html',
+  'Loafer / Mocassim — Marrom Chocolate':
+    'https://www.abc-mart.net/',
+  'Chelsea Boot — Preta':
+    'https://www.zara.com/jp/ja/%E3%83%AC%E3%82%B5%E3%82%99%E3%83%BC%E3%83%81%E3%82%A7%E3%83%AB%E3%82%B7%E3%83%BC%E3%83%95%E3%82%99%E3%83%BC%E3%83%84-p11108910.html',
+
+  // ── BUDGET: ACESSÓRIOS ──
+  'Cachecol Lã / Cashmere Blend':
+    'https://www.uniqlo.com/jp/ja/men/accessories/scarves',
+  'Kit Meias — Algodão / Lã Fina':
+    'https://tabio.com/jp/detail/062130927/',
+  'Óculos — Armação Tortoise / Acetato Quente':
+    'https://www.jins.com/jp/item/UCF-22A-181.html',
+  'Cinto Couro — Marrom Chocolate':
+    'https://www.abc-mart.net/',
+
+  // ── PREMIUM: CASACOS ──
+  'Overcoat Lã Virgem':
+    'https://www.privatewhitevc.com/products/the-chester-overcoat',
+  'Mackintosh Rubberized Cotton Coat':
+    'https://www.mackintosh.com/en-us/products/mens-dunoon-raintec-short-coat-navy',
+
+  // ── PREMIUM: CAMISAS ──
+  'Camisa Oxford OCBD':
+    'https://www.drakes.com/products/white-oxford-cotton-cloth-button-down-shirt-1',
+  'Camisa Linho Italiana':
+    'https://www.massimodutti.com/us/slimfit-100-linen-shirt-l00120408',
+
+  // ── PREMIUM: TOPS ──
+  'Classic T-Shirt — Off-white & Preta':
+    'https://us.sunspel.com/products/mens-short-sleeve-crew-neck-t-shirt-white',
+  'Polo Sea Island Cotton':
+    'https://www.johnsmedley.com/en-us/isis-navy',
+  'Sweatshirt Minimal':
+    'https://www.arket.com/en/men/sweatshirts-hoodies/product.french-terry-sweatshirt-grey.0495533005.html',
+
+  // ── PREMIUM: MID-LAYER ──
+  'Cardigan Cachemira':
+    'https://johnstonsofelgin.com/en-us/products/mens-camel-cashmere-v-neck-jumper',
+  'Merino Crewneck':
+    'https://www.cos.com/en-ww/men/menswear/knitwear/merino/product/oversized-merino-wool-jersey-jumper-navy-1250554001',
+
+  // ── PREMIUM: CALÇAS ──
+  'Jeans Selvedge Japonês':
+    'https://www.momotarojeans.net/collection/0705SP/index.html',
+  'Chino Slim — Caramelo (Incotex)':
+    'https://www.farfetch.com/shopping/men/73456-designer-incotex/chinos-2/items.aspx',
+
+  // ── PREMIUM: CALÇADOS ──
+  'Loafer / Penny Loafer':
+    'https://www.meermin.es/in_en/10165055170000sg-17-101650-dark-brown-alpine-calf-g-marron.html',
+  'Chelsea Boot':
+    'https://trickers.com/products/brighton-chelsea-boot-brown-cutter',
+  'Tênis Minimal — Branco':
+    'https://www.ssense.com/en-us/men/product/common-projects/white-original-achilles-low-sneakers/17432331',
+
+  // ── PREMIUM: ACESSÓRIOS ──
+  'Cachecol Cachemira':
+    'https://www.drakes.com/products/oatmeal-cashmere-scarf',
+  'Meias Merino / Cachemira':
+    'https://www.pantherella.com/us/laburnum',
+  'Óculos — Acetato Japonês':
+    'https://eyevan7285.com/en/collection-all-models/',
+  'Oliver Peoples — Boston / Wellington':
+    'https://www.oliverpeoples.com/en-us/products/0ov5186f-1778',
+  'Relógio Japonês':
+    'https://www.seikowatches.com/us-en/products/presage',
+};
+
+// Incotex tem nome levemente diferente no HTML (sem sufixo) — fallback por brand
+const brandFallback = {
+  'Incotex': 'https://www.farfetch.com/shopping/men/73456-designer-incotex/chinos-2/items.aspx',
+  'Paraboot': 'https://www.paraboot.com/',
+  'Begg':     'https://www.beggandco.com/',
 };
 
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.item-card').forEach(card => {
+    const nameEl  = card.querySelector('.item-name');
     const brandEl = card.querySelector('.item-brand');
     const searchEl = card.querySelector('.item-search');
-    if (!brandEl || !searchEl) return;
+    if (!nameEl || !searchEl) return;
 
-    const brandText = brandEl.textContent;
-    let matched = null;
+    const name  = nameEl.textContent.trim();
+    const brand = brandEl ? brandEl.textContent.trim() : '';
 
-    for (const [key, url] of Object.entries(brandUrls)) {
-      if (brandText.includes(key)) { matched = { key, url }; break; }
+    let url = productLinks[name];
+
+    // fallback por brand se nome não bateu
+    if (!url) {
+      for (const [k, v] of Object.entries(brandFallback)) {
+        if (brand.includes(k)) { url = v; break; }
+      }
     }
 
-    if (matched) {
+    if (url) {
       const btn = document.createElement('a');
-      btn.href = matched.url;
+      btn.href = url;
       btn.target = '_blank';
       btn.rel = 'noopener noreferrer';
-      btn.textContent = `Abrir ${matched.key} →`;
+      btn.textContent = 'Ver produto →';
       btn.className = 'buy-btn';
       searchEl.insertAdjacentElement('afterend', btn);
-
-      // Se a marca tem múltiplos links, adiciona o segundo
-      const brandText2 = brandEl.textContent;
-      let second = null;
-      let found = false;
-      for (const [key2, url2] of Object.entries(brandUrls)) {
-        if (found && brandText2.includes(key2)) { second = { key: key2, url: url2 }; break; }
-        if (key2 === matched.key) found = true;
-      }
-      if (second) {
-        const btn2 = document.createElement('a');
-        btn2.href = second.url;
-        btn2.target = '_blank';
-        btn2.rel = 'noopener noreferrer';
-        btn2.textContent = `Abrir ${second.key} →`;
-        btn2.className = 'buy-btn';
-        btn2.style.marginLeft = '6px';
-        btn.insertAdjacentElement('afterend', btn2);
-      }
     } else {
       const note = document.createElement('div');
       note.className = 'buy-note';
-      note.textContent = '→ Buscar no Google pelo nome da marca';
+      note.textContent = '→ Buscar pelo nome exato no Google';
       searchEl.insertAdjacentElement('afterend', note);
     }
   });
