@@ -64,9 +64,15 @@
       "cachecol la caramelo",
       "meias kit (Tabio)",
       "oculos acetato tortoise/havana",
-      "cinto couro marrom"
+      "cinto couro marrom",
+      "shorts ativos DRY-EX Federer",
+      "calca jogger DRY Federer",
+      "moletom 3D knit hoodie Federer",
+      "AIRism camiseta treino (2-3 unidades)",
+      "tenis de treino (separado do lifestyle)"
     ],
-    "seasonal_gaps": ["inverno japonês (frio 0-10°C)", "verão japonês (quente/umido 25-35°C)"]
+    "seasonal_gaps": ["inverno japonês (frio 0-10°C)", "verão japonês (quente/umido 25-35°C)"],
+    "identified_gaps_note": "Guarda-roupa original cobria só smart casual; academia/esporte estava ausente apesar de 'gym' estar em main_scenes. Corrigido com sub-capsula esportiva usando peças da coleção Uniqlo x Federer (shorts, jogger, hoodie) em navy/preto/cinza para manter a mesma paleta do resto do guarda-roupa."
   },
 
   "shopping": {
