@@ -42,7 +42,7 @@
 
   "wardrobe": {
     "owned_items": [
-      {"name": "Tênis de Couro Dudalina Texturizado Preto", "category": "shoes", "color": "black leather, textured", "note": "bought in Brazil before moving — bridges casual sneaker and smart shoe; works with black/navy/grey looks"}
+      {"name": "Tênis de Couro Dudalina Texturizado Preto", "category": "shoes", "color": "black leather, textured, white sole", "price_brl": 339.99, "store": "Dafiti", "note": "bought in Brazil before moving — clean derby-cut leather sneaker with white sole; bridges casual sneaker and smart shoe; works with black/navy/grey/indigo looks"}
     ],
     "key_items": ["gym clothes (basic)", "weekend clothes"],
     "missing_items": [
