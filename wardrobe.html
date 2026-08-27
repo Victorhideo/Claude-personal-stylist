@@ -190,6 +190,37 @@
     gap: 8px;
     margin-bottom: 10px;
   }
+  .card-top-left {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    flex: 1;
+    min-width: 0;
+  }
+  .card-icon {
+    flex-shrink: 0;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    background: var(--tag-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .card-icon svg { width: 20px; height: 20px; }
+
+  .owned-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 20px;
+    background: #E3EFE3;
+    color: #2F6B2F;
+    white-space: nowrap;
+  }
   .priority-badge {
     font-size: 10px;
     font-weight: 700;
@@ -547,6 +578,23 @@
       <div class="section-title">Camisetas & Tops</div>
       <div class="items-grid">
 
+        <div class="item-card p2">
+          <div class="card-top">
+            <div>
+              <div class="item-name">Polo DRY-EX — Uniqlo x Roger Federer</div>
+              <div class="item-brand">Uniqlo</div>
+              <div class="item-search">Buscar: "The Roger Federer Collection" — coleção sazonal, verificar disponibilidade</div>
+            </div>
+            <span class="priority-badge badge-2">#2 Nível</span>
+          </div>
+          <div class="card-meta">
+            <span class="tag color-tag"><span class="color-dot" style="background:#1B2A4A"></span>Navy</span>
+            <span class="tag season">Primavera · Verão</span>
+          </div>
+          <div class="item-price">~¥2.990–4.990 / ~R$27–45</div>
+          <div class="item-why">Referência de estilo off-court do Federer — exatamente a vibe "diferenciado mas não engomado" que você quer. Pegue em <strong>navy</strong> (cor mais neutra da coleção). Evite amarelo, azul vivo e qualquer versão com logo "RF" grande — fogem da paleta Autumn.</div>
+        </div>
+
         <div class="item-card p1">
           <div class="card-top">
             <div>
@@ -775,6 +823,22 @@
     <div class="section">
       <div class="section-title">Calçados (sua maior lacuna)</div>
       <div class="items-grid">
+
+        <div class="item-card" style="border-left: 3px solid #2F6B2F;">
+          <div class="card-top">
+            <div>
+              <div class="item-name">Tênis de Couro Dudalina Texturizado</div>
+              <div class="item-brand">Dudalina (Dafiti)</div>
+              <div class="item-search">Já comprado — não precisa buscar</div>
+            </div>
+            <span class="owned-badge">✓ Já tem</span>
+          </div>
+          <div class="card-meta">
+            <span class="tag color-tag"><span class="color-dot" style="background:#1A1A1A"></span>Preto texturizado</span>
+            <span class="tag season">Todas estações</span>
+          </div>
+          <div class="item-why">Sneaker de couro preto — ponte entre tênis casual e sapato social. Ótimo com calça preta, jeans índigo escuro, ou chino escuro. Resolve parte do gap de calçado sem gastar mais.</div>
+        </div>
 
         <div class="item-card p1">
           <div class="card-top">
@@ -1639,12 +1703,71 @@ const brandFallback = {
   'Begg':     'https://www.beggandco.com/',
 };
 
+// Ícones por categoria (line icons, silhueta simples) — usados quando não há foto real do produto
+const categoryIcons = {
+  coat:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3l5 2 5-2 2 5-3 1.5V21H5V9.5L2 8z"/><path d="M9 3.5v6M15 3.5v6"/></svg>',
+  shirt:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3l4 2 4-2 4 4-3 3v11H7V10L4 7z"/><path d="M12 5v2"/></svg>',
+  polo:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3l4 1.5L16 3l4 4-3 3v11H7V10L4 7z"/><circle cx="12" cy="7" r="0.6" fill="currentColor"/><circle cx="12" cy="9.5" r="0.6" fill="currentColor"/></svg>',
+  tshirt:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4L4 7l2 3 2-1v11h8V9l2 1 2-3-3-3-3 1.5h-4z"/></svg>',
+  knit:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3l4 1.5L16 3l4 4-3 3v11H7V10L4 7z"/><path d="M9 21V9M15 21V9" stroke-dasharray="1.5 1.8"/></svg>',
+  pants:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2h10l1 6-1.5 1L18 21h-4l-1.5-9L11 21H7l1.5-12L7 8z"/></svg>',
+  loafer:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17c0-2 2-3 4-4l6-3c2-1 4-1 6 1l2 2v3c0 1-1 2-2 2H4c-1 0-1-1-1-1z"/><path d="M9 12v3"/></svg>',
+  boot:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2h5v9l6 4c1 .6 1 2 1 2H4v-6c0-1 .5-2 2-2h2z"/><path d="M8 6h5M8 9h5"/></svg>',
+  sneaker:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16c2-1 3-4 5-5l4-2 5 3 4-1v3c1 0 2 1 2 2s-1 2-2 2H4c-1 0-1-1-1-1z"/></svg>',
+  scarf:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6c3 2 6 2 9 0s6-2 9 0"/><path d="M8 6v13c0 1 1 2 2 2s2-1 2-2v-4"/></svg>',
+  glasses:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="14" r="3.5"/><circle cx="17.5" cy="14" r="3.5"/><path d="M10 14h4M3 12l1-4h2M21 12l-1-4h-2"/></svg>',
+  belt:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="10" width="18" height="4" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>',
+  socks:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2h6v9l4 5c1 1.5 0 4-2 4h-4c-1 0-2-1-2-2v-6H9z"/></svg>',
+  watch:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5.5"/><path d="M12 9v3l2 1M9 3h6M9 21h6"/></svg>',
+};
+
+function pickIcon(name) {
+  const n = name.toLowerCase();
+  if (n.includes('coat') || n.includes('overcoat') || n.includes('chester') || n.includes('mackintosh') || n.includes('down jacket') || n.includes('harrington') || n.includes('jaqueta')) return categoryIcons.coat;
+  if (n.includes('polo')) return categoryIcons.polo;
+  if (n.includes('camisa') || n.includes('shirt') || n.includes('oxford') || n.includes('flanela') || n.includes('linho')) return categoryIcons.shirt;
+  if (n.includes('cardigan') || n.includes('fleece') || n.includes('crewneck') || n.includes('merino') && n.includes('jumper')) return categoryIcons.knit;
+  if (n.includes('camiseta') || n.includes('t-shirt') || n.includes('tshirt') || n.includes('heattech — camiseta')) return categoryIcons.tshirt;
+  if (n.includes('moletom') || n.includes('sweatshirt') || n.includes('sweater')) return categoryIcons.knit;
+  if (n.includes('calça') || n.includes('chino') || n.includes('jeans') || n.includes('pants') || n.includes('jogger')) return categoryIcons.pants;
+  if (n.includes('loafer') || n.includes('mocassim')) return categoryIcons.loafer;
+  if (n.includes('boot') || n.includes('chelsea')) return categoryIcons.boot;
+  if (n.includes('tênis') || n.includes('tenis') || n.includes('sneaker') || n.includes('achilles') || n.includes('stan smith')) return categoryIcons.sneaker;
+  if (n.includes('cachecol') || n.includes('scarf')) return categoryIcons.scarf;
+  if (n.includes('óculos') || n.includes('oculos') || n.includes('glasses') || n.includes('peck') || n.includes('eyevan')) return categoryIcons.glasses;
+  if (n.includes('cinto') || n.includes('belt')) return categoryIcons.belt;
+  if (n.includes('meias') || n.includes('socks') || n.includes('laburnum')) return categoryIcons.socks;
+  if (n.includes('relógio') || n.includes('relogio') || n.includes('watch') || n.includes('seiko') || n.includes('orient')) return categoryIcons.watch;
+  return categoryIcons.tshirt;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  // Ícones + reorganização do card-top
+  document.querySelectorAll('.item-card').forEach(card => {
+    const cardTop = card.querySelector('.card-top');
+    const nameEl  = card.querySelector('.item-name');
+    if (!cardTop || !nameEl) return;
+
+    const textBlock = nameEl.closest('.card-top > div');
+    if (!textBlock || textBlock.classList.contains('card-top-left')) return;
+
+    const iconWrap = document.createElement('div');
+    iconWrap.className = 'card-icon';
+    iconWrap.innerHTML = pickIcon(nameEl.textContent.trim());
+
+    const left = document.createElement('div');
+    left.className = 'card-top-left';
+    textBlock.parentElement.insertBefore(left, textBlock);
+    left.appendChild(iconWrap);
+    left.appendChild(textBlock);
+  });
+
   document.querySelectorAll('.item-card').forEach(card => {
     const nameEl  = card.querySelector('.item-name');
     const brandEl = card.querySelector('.item-brand');
     const searchEl = card.querySelector('.item-search');
-    if (!nameEl || !searchEl) return;
+    const isOwned = !!card.querySelector('.owned-badge');
+    if (!nameEl || !searchEl || isOwned) return;
 
     const name  = nameEl.textContent.trim();
     const brand = brandEl ? brandEl.textContent.trim() : '';

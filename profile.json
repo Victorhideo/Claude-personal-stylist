@@ -29,17 +29,21 @@
       "sporty": 0.25,
       "formal": 0.35
     },
-    "style_label": "Smart Casual Minimalista",
-    "target_vibes": ["clean", "simple", "presentable", "elegant", "European smart casual"],
+    "style_label": "Smart Casual Minimalista — Differentiated Professional",
+    "target_vibes": ["clean", "simple", "presentable", "elegant", "European smart casual", "professional but not stiff", "quietly distinctive"],
     "favorite_brands": ["Zara", "Uniqlo", "Hugo Boss", "Gas", "Banana Republic", "Levi's"],
-    "favorite_people": ["Charles Leclerc"],
-    "avoid": ["tank tops", "tight fitted shirts", "heavy logos", "oversized streetwear"],
+    "favorite_people": ["Charles Leclerc", "Roger Federer (off-court style)"],
+    "avoid": ["tank tops", "tight fitted shirts", "heavy logos", "oversized streetwear", "overly formal/starched looks", "bright yellow/blue sporty graphics"],
     "preferred_fit": "just-fit, not tight, not baggy — straight silhouette",
     "color_preference": "earth tones, warm neutrals — terracotta, olive, camel, dark brown, warm grey, navy",
-    "pattern_preference": ["solid colors", "minimal patterns"]
+    "pattern_preference": ["solid colors", "minimal patterns"],
+    "image_goal": "Wants to look professional/successful without being overly formal — 'differentiated' impression via quality and fit, not flashiness. Comfortable adding one athletic-adjacent influence (Federer off-court polos) as long as it stays in the Autumn palette (navy over yellow/bright blue, no big logos)."
   },
 
   "wardrobe": {
+    "owned_items": [
+      {"name": "Tênis de Couro Dudalina Texturizado Preto", "category": "shoes", "color": "black leather, textured", "note": "bought in Brazil before moving — bridges casual sneaker and smart shoe; works with black/navy/grey looks"}
+    ],
     "key_items": ["gym clothes (basic)", "weekend clothes"],
     "missing_items": [
       "quality basic t-shirts (straight fit, Supima)",
