@@ -268,6 +268,34 @@
     border-top: 1px solid var(--border);
   }
 
+  /* FLAT LAY (visualização de combinação de cores sem foto real) */
+  .flatlay {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .flatlay-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+  }
+  .flatlay-swatch {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    border: 1px solid rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .flatlay-label { font-size: 8.5px; color: var(--muted); text-align: center; max-width: 44px; line-height: 1.2; }
+
   /* LOOKS */
   .looks-section { margin-top: 40px; }
   .looks-grid {
@@ -1095,6 +1123,11 @@
             <div class="look-title">Home Office Apresentável</div>
             <span class="look-season">Todas estações</span>
           </div>
+          <div class="flatlay">
+            <div class="flatlay-item"><div class="flatlay-swatch" style="background:#1B2A4A">👕</div><div class="flatlay-label">Polo navy</div></div>
+            <div class="flatlay-item"><div class="flatlay-swatch" style="background:#B07D3A">👖</div><div class="flatlay-label">Chino caramelo</div></div>
+            <div class="flatlay-item"><div class="flatlay-swatch" style="background:#F0E8D8">👟</div><div class="flatlay-label">Tênis branco</div></div>
+          </div>
           <ul class="look-items">
             <li><span class="part">Top</span> Polo navy (Uniqlo)</li>
             <li><span class="part">Calça</span> Chino caramelo</li>
@@ -1107,6 +1140,11 @@
           <div class="look-header">
             <div class="look-title">Home Office Relaxado</div>
             <span class="look-season">Outono · Inverno</span>
+          </div>
+          <div class="flatlay">
+            <div class="flatlay-item"><div class="flatlay-swatch" style="background:#3D3D3D">🧶</div><div class="flatlay-label">Moletom cinza</div></div>
+            <div class="flatlay-item"><div class="flatlay-swatch" style="background:#24365E">👖</div><div class="flatlay-label">Jeans índigo</div></div>
+            <div class="flatlay-item"><div class="flatlay-swatch" style="background:#F0E8D8">👟</div><div class="flatlay-label">Tênis branco</div></div>
           </div>
           <ul class="look-items">
             <li><span class="part">Top</span> Moletom cinza (Uniqlo)</li>
@@ -1121,6 +1159,11 @@
             <div class="look-title">Fim de Semana Casual</div>
             <span class="look-season">Primavera · Verão</span>
           </div>
+          <div class="flatlay">
+            <div class="flatlay-item"><div class="flatlay-swatch" style="background:#F0E8D8">👕</div><div class="flatlay-label">Camiseta off-white</div></div>
+            <div class="flatlay-item"><div class="flatlay-swatch" style="background:#24365E">👖</div><div class="flatlay-label">Jeans índigo</div></div>
+            <div class="flatlay-item"><div class="flatlay-swatch" style="background:#F0E8D8">👟</div><div class="flatlay-label">Tênis branco</div></div>
+          </div>
           <ul class="look-items">
             <li><span class="part">Top</span> Camiseta off-white (Supima)</li>
             <li><span class="part">Calça</span> Jeans índigo escuro</li>
@@ -1134,6 +1177,11 @@
             <div class="look-title">Fim de Semana com Cor</div>
             <span class="look-season">Qualquer estação</span>
           </div>
+          <div class="flatlay">
+            <div class="flatlay-item"><div class="flatlay-swatch" style="background:#C4622D">👕</div><div class="flatlay-label">Camiseta terracota</div></div>
+            <div class="flatlay-item"><div class="flatlay-swatch" style="background:#1A1A1A">👖</div><div class="flatlay-label">Calça preta</div></div>
+            <div class="flatlay-item"><div class="flatlay-swatch" style="background:#F0E8D8">👟</div><div class="flatlay-label">Tênis branco</div></div>
+          </div>
           <ul class="look-items">
             <li><span class="part">Top</span> Camiseta terracota</li>
             <li><span class="part">Calça</span> Calça preta slim</li>
@@ -1146,6 +1194,12 @@
           <div class="look-header">
             <div class="look-title">Smart Casual (jantar / sair)</div>
             <span class="look-season">Todas estações</span>
+          </div>
+          <div class="flatlay">
+            <div class="flatlay-item"><div class="flatlay-swatch" style="background:#F0E8D8">👔</div><div class="flatlay-label">Oxford off-white</div></div>
+            <div class="flatlay-item"><div class="flatlay-swatch" style="background:#1A1A1A">👖</div><div class="flatlay-label">Calça preta</div></div>
+            <div class="flatlay-item"><div class="flatlay-swatch" style="background:#5C3D2E">👞</div><div class="flatlay-label">Loafer marrom</div></div>
+            <div class="flatlay-item"><div class="flatlay-swatch" style="background:#5C3D2E">🔘</div><div class="flatlay-label">Cinto marrom</div></div>
           </div>
           <ul class="look-items">
             <li><span class="part">Top</span> Camisa oxford off-white</li>
@@ -1161,6 +1215,12 @@
             <div class="look-title">Look Leclerc</div>
             <span class="look-season">Primavera · Outono</span>
           </div>
+          <div class="flatlay">
+            <div class="flatlay-item"><div class="flatlay-swatch" style="background:#1B2A4A">👕</div><div class="flatlay-label">Polo navy</div></div>
+            <div class="flatlay-item"><div class="flatlay-swatch" style="background:#B07D3A">👖</div><div class="flatlay-label">Chino caramelo</div></div>
+            <div class="flatlay-item"><div class="flatlay-swatch" style="background:#5C3D2E">👞</div><div class="flatlay-label">Loafer marrom</div></div>
+            <div class="flatlay-item"><div class="flatlay-swatch" style="background:#5C3D2E">🔘</div><div class="flatlay-label">Cinto marrom</div></div>
+          </div>
           <ul class="look-items">
             <li><span class="part">Top</span> Polo navy</li>
             <li><span class="part">Calça</span> Chino caramelo</li>
@@ -1174,6 +1234,14 @@
           <div class="look-header">
             <div class="look-title">Inverno Japonês</div>
             <span class="look-season">Inverno</span>
+          </div>
+          <div class="flatlay">
+            <div class="flatlay-item"><div class="flatlay-swatch" style="background:#1A1A1A">👕</div><div class="flatlay-label">Camiseta preta</div></div>
+            <div class="flatlay-item"><div class="flatlay-swatch" style="background:#B07D3A">🧶</div><div class="flatlay-label">Cardigan caramelo</div></div>
+            <div class="flatlay-item"><div class="flatlay-swatch" style="background:#1B2A4A">🧥</div><div class="flatlay-label">Chester navy</div></div>
+            <div class="flatlay-item"><div class="flatlay-swatch" style="background:#1A1A1A">👖</div><div class="flatlay-label">Calça preta</div></div>
+            <div class="flatlay-item"><div class="flatlay-swatch" style="background:#1A1A1A">🥾</div><div class="flatlay-label">Chelsea boot</div></div>
+            <div class="flatlay-item"><div class="flatlay-swatch" style="background:#B07D3A">🧣</div><div class="flatlay-label">Cachecol caramelo</div></div>
           </div>
           <ul class="look-items">
             <li><span class="part">Base</span> HEATTECH (invisível)</li>
@@ -1192,6 +1260,12 @@
             <div class="look-title">Camada Aberta (Saída)</div>
             <span class="look-season">Primavera · Outono</span>
           </div>
+          <div class="flatlay">
+            <div class="flatlay-item"><div class="flatlay-swatch" style="background:#1A1A1A">👕</div><div class="flatlay-label">Camiseta preta</div></div>
+            <div class="flatlay-item"><div class="flatlay-swatch" style="background:#5C3D2E">👔</div><div class="flatlay-label">Flanela aberta</div></div>
+            <div class="flatlay-item"><div class="flatlay-swatch" style="background:#24365E">👖</div><div class="flatlay-label">Jeans índigo</div></div>
+            <div class="flatlay-item"><div class="flatlay-swatch" style="background:#F0E8D8">👟</div><div class="flatlay-label">Tênis branco</div></div>
+          </div>
           <ul class="look-items">
             <li><span class="part">Base</span> Camiseta preta</li>
             <li><span class="part">Camada</span> Camisa flanela aberta</li>
@@ -1206,6 +1280,11 @@
             <div class="look-title">Academia</div>
             <span class="look-season">Todas estações</span>
           </div>
+          <div class="flatlay">
+            <div class="flatlay-item"><div class="flatlay-swatch" style="background:#1A1A1A">👕</div><div class="flatlay-label">AIRism preta</div></div>
+            <div class="flatlay-item"><div class="flatlay-swatch" style="background:#1B2A4A">🩳</div><div class="flatlay-label">Shorts navy</div></div>
+            <div class="flatlay-item"><div class="flatlay-swatch" style="background:#3D3D3D">👟</div><div class="flatlay-label">Tênis treino</div></div>
+          </div>
           <ul class="look-items">
             <li><span class="part">Top</span> AIRism camiseta treino preta</li>
             <li><span class="part">Bottom</span> Shorts DRY-EX Federer navy</li>
@@ -1218,6 +1297,11 @@
           <div class="look-header">
             <div class="look-title">Casual Esportivo (recados / academia → rua)</div>
             <span class="look-season">Outono · Inverno</span>
+          </div>
+          <div class="flatlay">
+            <div class="flatlay-item"><div class="flatlay-swatch" style="background:#1B2A4A">🧶</div><div class="flatlay-label">Hoodie navy</div></div>
+            <div class="flatlay-item"><div class="flatlay-swatch" style="background:#3D3D3D">👖</div><div class="flatlay-label">Jogger cinza</div></div>
+            <div class="flatlay-item"><div class="flatlay-swatch" style="background:#1A1A1A">👟</div><div class="flatlay-label">Dudalina preto</div></div>
           </div>
           <ul class="look-items">
             <li><span class="part">Top</span> Moletom 3D Knit Hoodie Federer navy</li>
